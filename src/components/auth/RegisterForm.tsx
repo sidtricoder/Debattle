@@ -10,6 +10,7 @@ interface RegisterFormProps {
 }
 
 const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
+  console.log('RegisterForm rendered');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -26,10 +27,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const password = watch('password');
 
   const onSubmit = async (data: RegisterCredentials & { confirmPassword: string }) => {
+    console.log('RegisterForm onSubmit called', data);
     setIsLoading(true);
     clearError();
     try {
       const { confirmPassword, ...registerData } = data;
+      console.log('Calling signUp with:', registerData);
       await signUp(registerData);
     } catch (error) {
       console.error('Registration error:', error);

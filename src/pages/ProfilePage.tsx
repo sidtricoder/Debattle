@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Edit, Save, Camera, Trophy, TrendingUp, Target, Award, Settings, User, Shield } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import Layout from '../components/layout/Layout';
+import { fetchUserFromFirestore, useAuthStore } from '../stores/authStore';
+import SettingsForm from '../components/profile/SettingsForm';
 
 interface Achievement {
   id: string;
@@ -78,6 +80,13 @@ const ProfilePage: React.FC = () => {
     debate_style: user?.debate_style || 'analytical',
     preferred_topics: user?.preferred_topics || []
   });
+
+  // Always fetch the latest user data from Firestore on mount and when user changes
+  useEffect(() => {
+    if (user?.uid) {
+      fetchUserFromFirestore(user.uid, useAuthStore.setState);
+    }
+  }, [user?.uid]);
 
   const handleSave = async () => {
     try {
@@ -386,90 +395,8 @@ const ProfilePage: React.FC = () => {
           {activeTab === 'settings' && (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Account Settings</h2>
-              
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Preferences</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Debate Style
-                      </label>
-                      <select
-                        value={editForm.debate_style}
-                        onChange={(e) => setEditForm({ ...editForm, debate_style: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      >
-                        <option value="analytical">Analytical</option>
-                        <option value="persuasive">Persuasive</option>
-                        <option value="logical">Logical</option>
-                        <option value="emotional">Emotional</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Preferred Topics
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {['Technology', 'Politics', 'Business', 'Education', 'Environment', 'Health'].map((topic) => (
-                          <label key={topic} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={editForm.preferred_topics.includes(topic.toLowerCase())}
-                              onChange={(e) => {
-                                const topics = e.target.checked
-                                  ? [...editForm.preferred_topics, topic.toLowerCase()]
-                                  : editForm.preferred_topics.filter(t => t !== topic.toLowerCase());
-                                setEditForm({ ...editForm, preferred_topics: topics });
-                              }}
-                              className="mr-2"
-                            />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{topic}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Privacy</h3>
-                  <div className="space-y-4">
-                    <label className="flex items-center">
-                      <input type="checkbox" defaultChecked className="mr-2" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Show my profile to other users</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" defaultChecked className="mr-2" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Show my rating publicly</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" defaultChecked className="mr-2" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Allow debate invitations</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Notifications</h3>
-                  <div className="space-y-4">
-                    <label className="flex items-center">
-                      <input type="checkbox" defaultChecked className="mr-2" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Email notifications</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" defaultChecked className="mr-2" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Push notifications</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" defaultChecked className="mr-2" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Achievement notifications</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-          </div>
+              <SettingsForm />
+            </div>
           )}
         </motion.div>
       </div>

@@ -49,6 +49,7 @@ export interface Debate {
   category: string;
   difficulty: number;
   participants: DebateParticipant[];
+  participantIds: string[];
   status: 'waiting' | 'active' | 'completed' | 'abandoned';
   arguments: DebateArgument[];
   currentTurn: string;
@@ -58,6 +59,9 @@ export interface Debate {
   createdAt: number;
   startedAt?: number;
   endedAt?: number;
+  isPractice?: boolean;
+  aiPersonality?: string;
+  practiceTips?: string[];
   judgment?: {
     winner: string;
     scores: Record<string, number>;
@@ -124,11 +128,12 @@ export const useDebateStore = create<DebateState>((set, get) => ({
   createDebate: async (topic, category, difficulty) => {
     set({ isLoading: true, error: null });
     try {
-      const debateRef = await addDoc(collection(firestore, 'debates'), {
+      const debateData = {
         topic,
         category,
         difficulty,
         participants: [],
+        participantIds: [],
         status: 'waiting',
         arguments: [],
         currentTurn: '',
@@ -140,7 +145,9 @@ export const useDebateStore = create<DebateState>((set, get) => ({
           totalArguments: 0,
           debateDuration: 0
         }
-      });
+      };
+      
+      const debateRef = await addDoc(collection(firestore, 'debates'), debateData);
       
       const newDebate: Debate = {
         id: debateRef.id,
@@ -158,8 +165,11 @@ export const useDebateStore = create<DebateState>((set, get) => ({
         metadata: {
           totalArguments: 0,
           debateDuration: 0
-        }
+        },
+        participantIds: []
       };
+      
+      console.log('Created new debate:', newDebate);
       
       set(state => ({
         debatesHistory: [...state.debatesHistory, newDebate],
@@ -184,9 +194,16 @@ export const useDebateStore = create<DebateState>((set, get) => ({
       }
       
       const debate = debateDoc.data() as Debate;
+      
+      // Check if user is already in the debate
+      if (debate.participants.some(p => p.userId === userId)) {
+        set({ isLoading: false });
+        return;
+      }
+      
       const participant: DebateParticipant = {
         userId,
-        displayName: `User ${userId.slice(-4)}`,
+        displayName: userId === 'ai_opponent' ? 'AI Opponent' : `User ${userId.slice(-4)}`,
         rating: 1000,
         stance,
         isOnline: true,
@@ -194,13 +211,35 @@ export const useDebateStore = create<DebateState>((set, get) => ({
         lastSeen: Date.now()
       };
 
-      const updatedDebate = {
-        ...debate,
-        participants: [...debate.participants, participant],
-        status: (debate.participants.length === 1 ? 'active' : 'waiting') as 'waiting' | 'active' | 'completed' | 'abandoned',
-        startedAt: debate.participants.length === 1 ? Date.now() : debate.startedAt
-      };
+      const currentTime = Date.now();
+      let newParticipants = [...debate.participants, participant];
+      let newStatus = debate.status;
+      // Practice mode: if both user and AI are present, set status to 'active'
+      if (debate.isPractice && newParticipants.some(p => p.userId === 'ai_opponent') && newParticipants.length >= 2) {
+        newStatus = 'active';
+        console.log('[DEBUG] joinDebate: Practice mode, setting status to active');
+      } else if (newParticipants.length === 2) {
+        newStatus = 'active';
+      }
 
+      const newParticipantIds = newParticipants.map(p => p.userId);
+      const updatedDebate: any = {
+        ...debate,
+        participants: newParticipants,
+        participantIds: newParticipantIds,
+        status: newStatus,
+        currentTurn: debate.participants.length === 0 ? userId : debate.currentTurn
+      };
+      
+      // Only set startedAt if we're starting the debate and have a valid timestamp
+      if (debate.participants.length === 1 && currentTime && typeof currentTime === 'number' && !isNaN(currentTime)) {
+        updatedDebate.startedAt = currentTime;
+        console.log('Setting startedAt in joinDebate:', currentTime);
+      } else {
+        console.log('Not setting startedAt - participants length:', debate.participants.length, 'currentTime:', currentTime);
+      }
+
+      console.log('joinDebate update data:', updatedDebate);
       await updateDoc(debateRef, updatedDebate);
       
       set(state => ({
@@ -259,6 +298,7 @@ export const useDebateStore = create<DebateState>((set, get) => ({
       }
       
       const debate = debateDoc.data() as Debate;
+      console.log('[DEBUG] submitArgument: loaded debate', debate);
       const argument: DebateArgument = {
         id: `arg_${Date.now()}`,
         userId,
@@ -268,17 +308,35 @@ export const useDebateStore = create<DebateState>((set, get) => ({
         wordCount: content.split(' ').length
       };
 
+      // Practice mode logic: alternate turns between user and AI
+      let nextTurn = debate.participants.find(p => p.userId !== userId)?.userId || '';
+      let nextRound = debate.arguments.length % 2 === 0 ? debate.currentRound + 1 : debate.currentRound;
+      if (debate.isPractice && debate.participants.some(p => p.userId === 'ai_opponent')) {
+        if (userId !== 'ai_opponent') {
+          // User just submitted, now it's AI's turn
+          nextTurn = 'ai_opponent';
+          console.log('[DEBUG] Practice mode: switching turn to ai_opponent');
+        } else {
+          // AI just submitted, now it's user's turn
+          const realUser = debate.participants.find(p => p.userId !== 'ai_opponent');
+          nextTurn = realUser?.userId || '';
+          nextRound = debate.currentRound + 1;
+          console.log('[DEBUG] Practice mode: switching turn to user', nextTurn);
+        }
+      }
+
       const updatedDebate = {
         ...debate,
         arguments: [...debate.arguments, argument],
-        currentTurn: debate.participants.find(p => p.userId !== userId)?.userId || '',
-        currentRound: debate.arguments.length % 2 === 0 ? debate.currentRound + 1 : debate.currentRound,
+        currentTurn: nextTurn,
+        currentRound: nextRound,
+        participantIds: debate.participants.map(p => p.userId),
         metadata: {
           ...debate.metadata,
           totalArguments: debate.arguments.length + 1
         }
       };
-
+      console.log('[DEBUG] submitArgument: updatedDebate', updatedDebate);
       await updateDoc(debateRef, updatedDebate);
       
       set(state => ({
@@ -341,12 +399,13 @@ export const useDebateStore = create<DebateState>((set, get) => ({
         status: 'completed' as const,
         endedAt: Date.now(),
         judgment,
+        participantIds: debate.participants.map(p => p.userId),
         metadata: {
           ...debate.metadata,
           debateDuration: Date.now() - (debate.startedAt || debate.createdAt)
         }
       };
-
+      console.log('[DEBUG] endDebate: updatedDebate', updatedDebate);
       await updateDoc(debateRef, updatedDebate);
       
       set(state => ({
@@ -461,7 +520,7 @@ export const useDebateStore = create<DebateState>((set, get) => ({
     try {
       const debatesQuery = query(
         collection(firestore, 'debates'),
-        where('participants', 'array-contains', { userId }),
+        where('participantIds', 'array-contains', userId),
         orderBy('createdAt', 'desc'),
         limit(50)
       );
@@ -485,10 +544,13 @@ export const useDebateStore = create<DebateState>((set, get) => ({
       const debateDoc = await getDoc(debateRef);
       
       if (!debateDoc.exists()) {
+        set({ currentDebate: null });
         return null;
       }
       
-      return { id: debateDoc.id, ...debateDoc.data() } as Debate;
+      const debate = { id: debateDoc.id, ...debateDoc.data() } as Debate;
+      set({ currentDebate: debate });
+      return debate;
     } catch (error: any) {
       set({ error: error.message });
       throw error;

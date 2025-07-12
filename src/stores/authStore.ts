@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { signInWithGoogle, signOutUser, onAuthStateChange } from '../lib/firebase';
+import { signInWithGoogle, signOutUser, onAuthStateChange, firestore } from '../lib/firebase';
+import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { User, AuthState, LoginCredentials, RegisterCredentials } from '../types/auth';
+import { getAuth, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 
 interface AuthStore extends AuthState {
   // Actions
@@ -46,7 +48,7 @@ const createMockUser = (firebaseUser: any): User => ({
   debate_style: 'analytical',
   bio: 'New debater on the platform!',
   preferences: {
-    theme: 'auto',
+    theme: 'auto' as 'auto',
     notifications: {
       email: true,
       push: true,
@@ -67,6 +69,24 @@ const createMockUser = (firebaseUser: any): User => ({
   }
 });
 
+// Fetch the latest user data from Firestore and update the store
+export const fetchUserFromFirestore = async (uid: string, set: any) => {
+  const userDoc = await getDoc(doc(firestore, 'users', uid));
+  if (userDoc.exists()) {
+    const data = userDoc.data();
+    // Convert Firestore Timestamps to JS Dates
+    const user = {
+      ...data,
+      created_at: data.created_at?.toDate ? data.created_at.toDate() : data.created_at,
+      last_active: data.last_active?.toDate ? data.last_active.toDate() : data.last_active,
+    };
+    set({ user, isAuthenticated: true, loading: false });
+    localStorage.setItem('debattle_user', JSON.stringify(user));
+    return user;
+  }
+  return null;
+};
+
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
@@ -81,16 +101,103 @@ export const useAuthStore = create<AuthStore>()(
         try {
           set({ loading: true, error: null });
           const result = await signInWithGoogle();
-          const mockUser = createMockUser(result.user);
+          const firebaseUser = result.user;
+          // Check if user exists in Firestore
+          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          let userProfile: User;
+          if (userDocSnap.exists()) {
+            // User exists, use Firestore data
+            const data = userDocSnap.data();
+            userProfile = {
+              uid: data.uid,
+              email: data.email,
+              displayName: data.displayName,
+              username: data.username,
+              photoURL: data.photoURL,
+              rating: data.rating,
+              provisionalRating: data.provisionalRating,
+              gamesPlayed: data.gamesPlayed,
+              wins: data.wins,
+              losses: data.losses,
+              draws: data.draws,
+              winStreak: data.winStreak,
+              bestWinStreak: data.bestWinStreak,
+              win_rate: data.win_rate,
+              achievements: data.achievements,
+              xp: data.xp,
+              level: data.level,
+              tier: data.tier,
+              created_at: data.created_at?.toDate ? data.created_at.toDate() : data.created_at,
+              last_active: new Date(),
+              preferred_topics: data.preferred_topics,
+              debate_style: data.debate_style,
+              bio: data.bio,
+              preferences: data.preferences,
+              stats: data.stats
+            };
+            // Update last_active
+            await setDoc(userDocRef, { last_active: Timestamp.fromDate(new Date()) }, { merge: true });
+          } else {
+            // New user, create Firestore document
+            userProfile = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              displayName: firebaseUser.displayName || 'Anonymous User',
+              username: firebaseUser.displayName?.toLowerCase().replace(/\s+/g, '_') || 'anonymous',
+              photoURL: firebaseUser.photoURL || '',
+              rating: 1200,
+              provisionalRating: true,
+              gamesPlayed: 0,
+              wins: 0,
+              losses: 0,
+              draws: 0,
+              winStreak: 0,
+              bestWinStreak: 0,
+              win_rate: 0,
+              achievements: [],
+              xp: 0,
+              level: 1,
+              tier: 'bronze',
+              created_at: new Date(),
+              last_active: new Date(),
+              preferred_topics: ['technology', 'politics'],
+              debate_style: 'analytical',
+              bio: 'New debater on the platform!',
+              preferences: {
+                theme: 'auto' as 'auto',
+                notifications: {
+                  email: true,
+                  push: true,
+                  debate_invites: true,
+                  achievements: true
+                },
+                privacy: {
+                  profile_visible: true,
+                  show_rating: true,
+                  show_stats: true
+                }
+              },
+              stats: {
+                totalArgumentsPosted: 0,
+                averageResponseTime: 0,
+                favoriteTopics: [],
+                strongestCategories: []
+              }
+            };
+            await setDoc(userDocRef, {
+              ...userProfile,
+              created_at: Timestamp.fromDate(userProfile.created_at),
+              last_active: Timestamp.fromDate(userProfile.last_active)
+            });
+          }
           set({ 
-            user: mockUser, 
+            user: userProfile, 
             loading: false, 
             isAuthenticated: true,
             error: null 
           });
-          
-          // Save to localStorage for persistence
-          localStorage.setItem('debattle_user', JSON.stringify(mockUser));
+          localStorage.setItem('debattle_user', JSON.stringify(userProfile));
         } catch (error: any) {
           console.error('Google sign-in error:', error);
           set({ 
@@ -131,7 +238,7 @@ export const useAuthStore = create<AuthStore>()(
             debate_style: 'analytical',
             bio: 'New debater on the platform!',
             preferences: {
-              theme: 'auto',
+              theme: 'auto' as 'auto',
               notifications: {
                 email: true,
                 push: true,
@@ -172,62 +279,133 @@ export const useAuthStore = create<AuthStore>()(
       signUp: async (credentials: RegisterCredentials) => {
         try {
           set({ loading: true, error: null });
-          
-          // Mock registration
-          const mockUser: User = {
-            uid: `user_${Date.now()}`,
-            email: credentials.email,
-            displayName: credentials.displayName,
-            username: credentials.username,
-            photoURL: '',
-            rating: 1200,
-    provisionalRating: true,
-    gamesPlayed: 0,
-    wins: 0,
-    losses: 0,
-    draws: 0,
-    winStreak: 0,
-    bestWinStreak: 0,
-            win_rate: 0,
-    achievements: [],
-    xp: 0,
-    level: 1,
-            tier: 'bronze',
-            created_at: new Date(),
-            last_active: new Date(),
-            preferred_topics: ['technology', 'politics'],
-            debate_style: 'analytical',
-            bio: 'New debater on the platform!',
-            preferences: {
-              theme: 'auto',
-              notifications: {
-                email: true,
-                push: true,
-                debate_invites: true,
-                achievements: true
+          let userRecord;
+          let userProfile: User;
+          console.log('VITE_USE_FIREBASE_AUTH:', import.meta.env.VITE_USE_FIREBASE_AUTH);
+          if (import.meta.env.VITE_USE_FIREBASE_AUTH) {
+            const auth = getAuth();
+            const userCredential = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
+            userRecord = userCredential.user;
+            userProfile = {
+              uid: userRecord.uid,
+              email: userRecord.email || credentials.email, // ensure string
+              displayName: credentials.displayName,
+              username: credentials.username,
+              photoURL: userRecord.photoURL || credentials.photoURL || '',
+              rating: 1200,
+              provisionalRating: false,
+              gamesPlayed: 0,
+              wins: 0,
+              losses: 0,
+              draws: 0,
+              winStreak: 0,
+              bestWinStreak: 0,
+              win_rate: 0,
+              achievements: [],
+              xp: 0,
+              level: 1,
+              tier: 'bronze',
+              created_at: new Date(),
+              last_active: new Date(),
+              preferred_topics: ['politics', 'technology', 'environment'],
+              debate_style: 'analytical',
+              bio: 'Passionate debater with a focus on evidence-based arguments.',
+              preferences: {
+                theme: 'auto' as 'auto',
+                notifications: {
+                  email: true,
+                  push: true,
+                  debate_invites: true,
+                  achievements: true
+                },
+                privacy: {
+                  profile_visible: true,
+                  show_rating: true,
+                  show_stats: true
+                }
               },
-              privacy: {
-                profile_visible: true,
-                show_rating: true,
-                show_stats: true
+              stats: {
+                totalArgumentsPosted: 0,
+                averageResponseTime: 0,
+                favoriteTopics: ['technology', 'politics'],
+                strongestCategories: ['technology', 'science']
               }
-            },
-            stats: {
-              totalArgumentsPosted: 0,
-              averageResponseTime: 0,
-              favoriteTopics: [],
-              strongestCategories: []
-            }
-          };
-          
+            };
+            // Wait for auth state to be ready
+            await new Promise(resolve => {
+              const unsubscribe = onAuthStateChanged(auth, (user) => {
+                if (user && user.uid === userProfile.uid) {
+                  unsubscribe();
+                  resolve(true);
+                }
+              });
+            });
+          } else {
+            // Fallback to mock user for dev/test
+            userProfile = {
+              uid: `user_${Date.now()}`,
+              email: credentials.email,
+              displayName: credentials.displayName,
+              username: credentials.username,
+              photoURL: credentials.photoURL || '',
+              rating: 1200,
+              provisionalRating: false,
+              gamesPlayed: 0,
+              wins: 0,
+              losses: 0,
+              draws: 0,
+              winStreak: 0,
+              bestWinStreak: 0,
+              win_rate: 0,
+              achievements: [],
+              xp: 0,
+              level: 1,
+              tier: 'bronze',
+              created_at: new Date(),
+              last_active: new Date(),
+              preferred_topics: ['politics', 'technology', 'environment'],
+              debate_style: 'analytical',
+              bio: 'Passionate debater with a focus on evidence-based arguments.',
+              preferences: {
+                theme: 'auto' as 'auto',
+                notifications: {
+                  email: true,
+                  push: true,
+                  debate_invites: true,
+                  achievements: true
+                },
+                privacy: {
+                  profile_visible: true,
+                  show_rating: true,
+                  show_stats: true
+                }
+              },
+              stats: {
+                totalArgumentsPosted: 0,
+                averageResponseTime: 0,
+                favoriteTopics: ['technology', 'politics'],
+                strongestCategories: ['technology', 'science']
+              }
+            };
+          }
+          console.log('userProfile.uid:', userProfile.uid);
           set({ 
-            user: mockUser, 
+            user: userProfile, 
             loading: false, 
             isAuthenticated: true,
             error: null 
           });
-          
-          localStorage.setItem('debattle_user', JSON.stringify(mockUser));
+          localStorage.setItem('debattle_user', JSON.stringify(userProfile));
+          try {
+            await setDoc(doc(firestore, 'users', userProfile.uid), {
+              ...userProfile,
+              created_at: Timestamp.fromDate(userProfile.created_at),
+              last_active: Timestamp.fromDate(userProfile.last_active)
+            });
+            console.log('User profile created in Firestore successfully');
+          } catch (firestoreError: any) {
+            console.error('Failed to create user profile in Firestore:', firestoreError);
+          }
         } catch (error: any) {
           set({ 
             loading: false, 
@@ -281,7 +459,33 @@ export const useAuthStore = create<AuthStore>()(
           const currentUser = get().user;
           if (!currentUser) throw new Error('No user logged in');
           
-          const updatedUser = { ...currentUser, ...data };
+          // Merge updates
+          const updatedUser: User = {
+            ...currentUser,
+            ...data,
+            // Merge nested objects if present
+            preferences: {
+              ...currentUser.preferences,
+              ...(data.preferences || {})
+            },
+            stats: {
+              ...currentUser.stats,
+              ...(data.stats || {})
+            },
+            achievements: data.achievements || currentUser.achievements,
+            created_at: currentUser.created_at,
+            last_active: new Date(),
+          };
+          
+          // Write to Firestore
+          await setDoc(doc(firestore, 'users', updatedUser.uid), {
+            ...updatedUser,
+            created_at: Timestamp.fromDate(
+              updatedUser.created_at instanceof Date ? updatedUser.created_at : new Date(updatedUser.created_at)
+            ),
+            last_active: Timestamp.fromDate(new Date()),
+          }, { merge: true });
+          
           set({ 
             user: updatedUser, 
             loading: false, 

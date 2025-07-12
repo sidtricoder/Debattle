@@ -33,7 +33,7 @@ const App: React.FC = () => {
             }
           />
           <Route
-            path="/debate/:id"
+            path="/debate/:debateId"
             element={
               <ProtectedRoute>
                 <DebatePage />

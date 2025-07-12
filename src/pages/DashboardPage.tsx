@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../components/auth/AuthProvider';
 import { LogOut, User, Trophy, TrendingUp, Calendar, Target } from 'lucide-react';
 import Layout from '../components/layout/Layout';
+import { fetchUserFromFirestore, useAuthStore } from '../stores/authStore';
 
 const DashboardPage: React.FC = () => {
   const { user, signOut } = useAuth();
+
+  useEffect(() => {
+    if (user?.uid) {
+      fetchUserFromFirestore(user.uid, useAuthStore.setState);
+    }
+  }, [user?.uid]);
 
   const handleSignOut = async () => {
     try {

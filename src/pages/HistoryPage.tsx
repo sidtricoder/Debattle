@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { Calendar, Clock, Trophy, TrendingUp, TrendingDown, Minus, Search, Filter } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import Layout from '../components/layout/Layout';
+import { useDebateStore } from '../stores/debateStore';
+import { useEffect } from 'react';
 
 interface DebateHistory {
   id: string;
@@ -24,84 +26,6 @@ interface DebateHistory {
   category: string;
 }
 
-const mockHistory: DebateHistory[] = [
-  {
-    id: '1',
-    topic: 'Should social media platforms be regulated?',
-    opponent: {
-      name: 'Alex Johnson',
-      rating: 1250,
-      photoURL: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face'
-    },
-    result: 'win',
-    date: new Date('2024-01-15T14:30:00'),
-    duration: 25,
-    ratingChange: 15,
-    score: { user: 85, opponent: 72 },
-    category: 'Technology'
-  },
-  {
-    id: '2',
-    topic: 'Is remote work better than office work?',
-    opponent: {
-      name: 'Sarah Chen',
-      rating: 1180,
-      photoURL: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face'
-    },
-    result: 'loss',
-    date: new Date('2024-01-14T16:45:00'),
-    duration: 32,
-    ratingChange: -12,
-    score: { user: 68, opponent: 89 },
-    category: 'Business'
-  },
-  {
-    id: '3',
-    topic: 'Should college education be free?',
-    opponent: {
-      name: 'Mike Rodriguez',
-      rating: 1320,
-      photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face'
-    },
-    result: 'draw',
-    date: new Date('2024-01-13T10:15:00'),
-    duration: 28,
-    ratingChange: 0,
-    score: { user: 78, opponent: 78 },
-    category: 'Education'
-  },
-  {
-    id: '4',
-    topic: 'Are electric vehicles truly environmentally friendly?',
-    opponent: {
-      name: 'Emma Wilson',
-      rating: 1210,
-      photoURL: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face'
-    },
-    result: 'win',
-    date: new Date('2024-01-12T19:20:00'),
-    duration: 22,
-    ratingChange: 18,
-    score: { user: 91, opponent: 65 },
-    category: 'Environment'
-  },
-  {
-    id: '5',
-    topic: 'Should AI development be paused?',
-    opponent: {
-      name: 'David Kim',
-      rating: 1280,
-      photoURL: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop&crop=face'
-    },
-    result: 'loss',
-    date: new Date('2024-01-11T13:10:00'),
-    duration: 35,
-    ratingChange: -8,
-    score: { user: 74, opponent: 82 },
-    category: 'Technology'
-  }
-];
-
 const HistoryPage: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -109,12 +33,48 @@ const HistoryPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState<'date' | 'rating' | 'duration'>('date');
 
-  const filteredHistory = mockHistory.filter(debate => {
+  const { debatesHistory, loadDebateHistory, isLoading } = useDebateStore();
+
+  useEffect(() => {
+    if (user?.uid) {
+      loadDebateHistory(user.uid);
+    }
+  }, [user, loadDebateHistory]);
+
+  // Convert Firestore debates to the expected format for filtering/sorting
+  const debates = debatesHistory.map(d => {
+    let duration = 0;
+    if (d.metadata?.debateDuration && !isNaN(Number(d.metadata.debateDuration))) {
+      duration = Math.round(Number(d.metadata.debateDuration) / 60000);
+    } else if (d.endedAt && d.startedAt && !isNaN(Number(d.endedAt)) && !isNaN(Number(d.startedAt))) {
+      duration = Math.round((Number(d.endedAt) - Number(d.startedAt)) / 60000);
+    } else if (d.endedAt && d.createdAt && !isNaN(Number(d.endedAt)) && !isNaN(Number(d.createdAt))) {
+      duration = Math.round((Number(d.endedAt) - Number(d.createdAt)) / 60000);
+    }
+    return {
+      ...d,
+      date: (d.endedAt && !isNaN(Number(d.endedAt))) ? new Date(d.endedAt) : (d.createdAt && !isNaN(Number(d.createdAt)) ? new Date(d.createdAt) : new Date()),
+      result: d.judgment?.winner === user?.uid ? 'win' : (d.judgment?.winner ? 'loss' : 'draw'),
+      opponent: {
+        name: d.participants.find(p => p.userId !== user?.uid)?.displayName || 'AI Opponent',
+        rating: d.participants.find(p => p.userId !== user?.uid)?.rating || 1200,
+        photoURL: '' // Optionally add avatar logic
+      },
+      duration,
+      ratingChange: d.ratingChanges?.[user?.uid || ''] || 0,
+      score: {
+        user: d.judgment?.scores?.[user?.uid || ''] || 0,
+        opponent: d.judgment?.scores?.[d.participants.find(p => p.userId !== user?.uid)?.userId || ''] || 0
+      },
+      category: d.category
+    };
+  });
+
+  const filteredHistory = debates.filter(debate => {
     const matchesSearch = debate.topic.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          debate.opponent.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesResult = selectedResult === 'all' || debate.result === selectedResult;
     const matchesCategory = selectedCategory === 'all' || debate.category === selectedCategory;
-    
     return matchesSearch && matchesResult && matchesCategory;
   });
 
@@ -131,25 +91,30 @@ const HistoryPage: React.FC = () => {
     }
   });
 
-  const categories = ['all', ...Array.from(new Set(mockHistory.map(d => d.category)))];
+  const categories = ['all', ...Array.from(new Set(debates.map(d => d.category)))];
 
   const stats = {
-    total: mockHistory.length,
-    wins: mockHistory.filter(d => d.result === 'win').length,
-    losses: mockHistory.filter(d => d.result === 'loss').length,
-    draws: mockHistory.filter(d => d.result === 'draw').length,
-    winRate: Math.round((mockHistory.filter(d => d.result === 'win').length / mockHistory.length) * 100),
-    totalRatingChange: mockHistory.reduce((sum, d) => sum + d.ratingChange, 0),
-    avgDuration: Math.round(mockHistory.reduce((sum, d) => sum + d.duration, 0) / mockHistory.length)
+    total: debates.length,
+    wins: debates.filter(d => d.result === 'win').length,
+    losses: debates.filter(d => d.result === 'loss').length,
+    draws: debates.filter(d => d.result === 'draw').length,
+    winRate: debates.length ? Math.round((debates.filter(d => d.result === 'win').length / debates.length) * 100) : 0,
+    totalRatingChange: debates.reduce((sum, d) => sum + d.ratingChange, 0),
+    avgDuration: debates.length ? Math.round(debates.reduce((sum, d) => sum + d.duration, 0) / debates.length) : 0
   };
 
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+    try {
+      if (!(date instanceof Date) || isNaN(date.getTime())) return 'N/A';
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    } catch {
+      return 'N/A';
+    }
   };
 
   const getResultIcon = (result: string) => {
@@ -177,6 +142,17 @@ const HistoryPage: React.FC = () => {
         return 'text-gray-600 dark:text-gray-400';
     }
   };
+
+  // Replace all mockHistory references with debates
+  // Show loading state
+  if (isLoading) {
+    return <Layout><div className="p-8 text-center">Loading debate history...</div></Layout>;
+  }
+
+  // Show empty state
+  if (!debates.length) {
+    return <Layout><div className="p-8 text-center">No debates found. Try participating in a debate!</div></Layout>;
+  }
 
   return (
     <Layout>
@@ -299,7 +275,7 @@ const HistoryPage: React.FC = () => {
         >
           {sortedHistory.map((debate, index) => (
             <motion.div
-              key={debate.id}
+              key={debate.id || index}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 * index }}
@@ -317,11 +293,13 @@ const HistoryPage: React.FC = () => {
 
                   {/* Opponent Info */}
                   <div className="flex items-center gap-3">
-                    <img
-                      src={debate.opponent.photoURL}
-                      alt={debate.opponent.name}
-                      className="w-10 h-10 rounded-full"
-                    />
+                    {debate.opponent.photoURL ? (
+                      <img
+                        src={debate.opponent.photoURL}
+                        alt={debate.opponent.name}
+                        className="w-10 h-10 rounded-full"
+                      />
+                    ) : null}
                   <div>
                       <div className="font-medium text-gray-900 dark:text-white">
                         {debate.opponent.name}

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Clock, Users, TrendingUp, Zap, Target } from 'lucide-react';
-import { useAuth } from '../components/auth/AuthProvider';
+import { useAuthStore } from '../stores/authStore';
+import { useDebateStore } from '../stores/debateStore';
 import Layout from '../components/layout/Layout';
 
 interface Topic {
@@ -58,7 +59,7 @@ const topics: Topic[] = [
 ];
 
 const FindDebatePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,19 +79,65 @@ const FindDebatePage: React.FC = () => {
   const categories = ['all', ...Array.from(new Set(topics.map(t => t.category)))];
 
   const handleFindMatch = async (topic: Topic) => {
+    if (!user) {
+      alert('Please sign in to find a match');
+      return;
+    }
+    
     setIsFindingMatch(true);
     setSelectedTopic(topic);
     
-    // Simulate matchmaking process
-    setTimeout(() => {
+    try {
+      // Join queue with topic preferences
+      await useDebateStore.getState().joinQueue(user.uid, {
+        topics: [topic.title],
+        difficulty: topic.difficulty === 'easy' ? 3 : topic.difficulty === 'medium' ? 6 : 9,
+        timeLimit: 3600
+      });
+      
+      // Try to find a match
+      const debate = await useDebateStore.getState().findMatch(user.uid);
+      
+      if (debate) {
+        navigate(`/debate/${debate.id}`);
+      } else {
+        // If no match found, create a new debate
+        const debateId = await useDebateStore.getState().createDebate(
+          topic.title,
+          topic.category.toLowerCase(),
+          topic.difficulty === 'easy' ? 3 : topic.difficulty === 'medium' ? 6 : 9
+        );
+        navigate(`/debate/${debateId}`);
+      }
+    } catch (error) {
+      console.error('Failed to find match:', error);
+      alert('Failed to find a match. Please try again.');
+    } finally {
       setIsFindingMatch(false);
-      // Navigate to debate room with topic
-      navigate(`/debate/new?topic=${topic.id}`);
-    }, 3000);
+    }
   };
 
-  const handleCreateDebate = (topic: Topic) => {
-    navigate(`/debate/new?topic=${topic.id}&mode=create`);
+  const handleCreateDebate = async (topic: Topic) => {
+    if (!user) {
+      alert('Please sign in to create a debate');
+      return;
+    }
+    
+    try {
+      const debateId = await useDebateStore.getState().createDebate(
+        topic.title,
+        topic.category.toLowerCase(),
+        topic.difficulty === 'easy' ? 3 : topic.difficulty === 'medium' ? 6 : 9
+      );
+      
+      // Join the debate as pro
+      await useDebateStore.getState().joinDebate(debateId, user.uid, 'pro');
+      
+      navigate(`/debate/${debateId}`);
+    } catch (error) {
+      console.error('Failed to create debate:', error);
+      alert('Failed to create debate. Please try again.');
+    }
   };
 
   return (

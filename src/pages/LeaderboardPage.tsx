@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Crown, Medal, TrendingUp, Users, Target, Search } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import Layout from '../components/layout/Layout';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { firestore } from '../lib/firebase';
 
 interface LeaderboardUser {
   id: string;
@@ -18,150 +20,41 @@ interface LeaderboardUser {
   level: number;
 }
 
-const mockLeaderboard: LeaderboardUser[] = [
-  {
-    id: '1',
-    rank: 1,
-    displayName: 'Alex Johnson',
-    username: 'alex_j',
-    photoURL: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face',
-    rating: 1850,
-    tier: 'diamond',
-    gamesPlayed: 156,
-    winRate: 78,
-    winStreak: 12,
-    level: 25
-  },
-  {
-    id: '2',
-    rank: 2,
-    displayName: 'Sarah Chen',
-    username: 'sarah_c',
-    photoURL: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face',
-    rating: 1820,
-    tier: 'diamond',
-    gamesPlayed: 142,
-    winRate: 75,
-    winStreak: 8,
-    level: 23
-  },
-  {
-    id: '3',
-    rank: 3,
-    displayName: 'Mike Rodriguez',
-    username: 'mike_r',
-    photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face',
-    rating: 1780,
-    tier: 'platinum',
-    gamesPlayed: 189,
-    winRate: 72,
-    winStreak: 15,
-    level: 28
-  },
-  {
-    id: '4',
-    rank: 4,
-    displayName: 'Emma Wilson',
-    username: 'emma_w',
-    photoURL: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face',
-    rating: 1750,
-    tier: 'platinum',
-    gamesPlayed: 134,
-    winRate: 76,
-    winStreak: 6,
-    level: 22
-  },
-  {
-    id: '5',
-    rank: 5,
-    displayName: 'David Kim',
-    username: 'david_k',
-    photoURL: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop&crop=face',
-    rating: 1720,
-    tier: 'platinum',
-    gamesPlayed: 167,
-    winRate: 71,
-    winStreak: 9,
-    level: 26
-  },
-  {
-    id: '6',
-    rank: 6,
-    displayName: 'Lisa Thompson',
-    username: 'lisa_t',
-    photoURL: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=40&h=40&fit=crop&crop=face',
-    rating: 1680,
-    tier: 'gold',
-    gamesPlayed: 145,
-    winRate: 69,
-    winStreak: 7,
-    level: 21
-  },
-  {
-    id: '7',
-    rank: 7,
-    displayName: 'James Brown',
-    username: 'james_b',
-    photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face',
-    rating: 1650,
-    tier: 'gold',
-    gamesPlayed: 178,
-    winRate: 68,
-    winStreak: 5,
-    level: 24
-  },
-  {
-    id: '8',
-    rank: 8,
-    displayName: 'Maria Garcia',
-    username: 'maria_g',
-    photoURL: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face',
-    rating: 1620,
-    tier: 'gold',
-    gamesPlayed: 123,
-    winRate: 73,
-    winStreak: 11,
-    level: 19
-  },
-  {
-    id: '9',
-    rank: 9,
-    displayName: 'John Smith',
-    username: 'john_s',
-    photoURL: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face',
-    rating: 1590,
-    tier: 'silver',
-    gamesPlayed: 156,
-    winRate: 67,
-    winStreak: 4,
-    level: 20
-  },
-  {
-    id: '10',
-    rank: 10,
-    displayName: 'Anna Davis',
-    username: 'anna_d',
-    photoURL: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face',
-    rating: 1560,
-    tier: 'silver',
-    gamesPlayed: 134,
-    winRate: 70,
-    winStreak: 8,
-    level: 18
-  }
-];
-
 const LeaderboardPage: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTier, setSelectedTier] = useState('all');
   const [sortBy, setSortBy] = useState<'rating' | 'games' | 'winRate'>('rating');
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
-  const filteredLeaderboard = mockLeaderboard.filter(player => {
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      const usersQuery = query(collection(firestore, 'users'), orderBy('rating', 'desc'));
+      const snapshot = await getDocs(usersQuery);
+      const users = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          displayName: data.displayName,
+          username: data.username,
+          photoURL: data.photoURL,
+          rating: data.rating,
+          tier: data.tier,
+          gamesPlayed: data.gamesPlayed,
+          winRate: data.win_rate,
+          winStreak: data.winStreak,
+          level: data.level,
+        };
+      });
+      setLeaderboard(users);
+    };
+    fetchLeaderboard();
+  }, []);
+
+  const filteredLeaderboard = leaderboard.filter(player => {
     const matchesSearch = player.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          player.username.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesTier = selectedTier === 'all' || player.tier === selectedTier;
-    
     return matchesSearch && matchesTier;
   });
 
@@ -200,7 +93,7 @@ const LeaderboardPage: React.FC = () => {
     }
   };
 
-  const userRank = mockLeaderboard.find(player => player.id === user?.uid);
+  const userRank = leaderboard.find(player => player.id === user?.uid);
 
   return (
     <Layout>

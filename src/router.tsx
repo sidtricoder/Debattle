@@ -19,7 +19,8 @@ const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/signup', element: <SignupPage /> },
   { path: '/dashboard', element: <ProtectedRoute><DashboardPage /></ProtectedRoute> },
-  { path: '/debate/:id', element: <ProtectedRoute><DebatePage /></ProtectedRoute> },
+  // Fix: use debateId param, not id
+  { path: '/debate/:debateId', element: <ProtectedRoute><DebatePage /></ProtectedRoute> },
   { path: '/debate/new', element: <ProtectedRoute><NewDebatePage /></ProtectedRoute> },
   { path: '/find-debate', element: <ProtectedRoute><NewDebatePage /></ProtectedRoute> },
   { path: '/leaderboard', element: <ProtectedRoute><LeaderboardPage /></ProtectedRoute> },
