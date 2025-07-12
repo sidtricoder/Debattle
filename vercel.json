@@ -1,12 +1,5 @@
 {
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "env": {
-    "VITE_GEMINI_API_KEY": "@VITE_GEMINI_API_KEY",
-    "VITE_APP_NAME": "@VITE_APP_NAME",
-    "VITE_APP_VERSION": "@VITE_APP_VERSION",
-    "VITE_APP_DESCRIPTION": "@VITE_APP_DESCRIPTION",
-    "VITE_APP_URL": "@VITE_APP_URL"
-  }
+  ]
 } 
