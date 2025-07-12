@@ -65,6 +65,7 @@ export interface RegisterCredentials {
   password: string;
   displayName: string;
   username: string;
+  photoURL?: string;
 }
 
 export interface AuthError {

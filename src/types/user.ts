@@ -1,6 +1,19 @@
-import { UserTier, Badge, UserPreferences, UserStats } from './auth';
+import { UserPreferences, UserStats } from './auth';
 import { DebateStats } from './debate';
 import { Achievement } from './global';
+
+// Define missing types locally
+export type UserTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  unlockedAt?: Date;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+}
 
 export interface UserProfile {
   uid: string;

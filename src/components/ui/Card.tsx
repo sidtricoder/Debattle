@@ -6,10 +6,9 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   gradient?: 'light' | 'dark';
-  as?: React.ElementType;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className, gradient = 'light', as: Component = 'div' }) => (
+export const Card: React.FC<CardProps> = ({ children, className, gradient = 'light' }) => (
   <motion.div
     whileHover={{ y: -4, boxShadow: '0 8px 32px 0 rgba(60,60,120,0.12)' }}
     className={clsx(
@@ -19,7 +18,6 @@ export const Card: React.FC<CardProps> = ({ children, className, gradient = 'lig
     )}
     tabIndex={0}
     role="region"
-    as={Component}
   >
     {children}
   </motion.div>

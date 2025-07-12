@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useAuthStore } from '../stores/authStore';
+import { useAuth } from '../components/auth/AuthProvider';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FcGoogle } from 'react-icons/fc';
@@ -14,7 +14,7 @@ interface RegisterFormInputs {
 }
 
 const RegisterPage: React.FC = () => {
-  const { signup, loginWithGoogle } = useAuthStore();
+  const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -36,28 +36,27 @@ const RegisterPage: React.FC = () => {
         reader.readAsDataURL(file);
       });
     }
-    const success = await signup({
-      displayName: data.displayName,
-      email: data.email,
-      password: data.password,
-      photoURL,
-      preferences: { theme: 'light', notifications: {}, privacy: {} },
-      stats: { totalArgumentsPosted: 0, averageResponseTime: 0, favoriteTopics: [], strongestCategories: [] },
-    } as any); // Type assertion to satisfy the store signature
-    if (success) {
+    try {
+      await signUp({
+        displayName: data.displayName,
+        email: data.email,
+        password: data.password,
+        username: data.displayName.toLowerCase().replace(/\s+/g, '_'),
+        photoURL,
+      });
       navigate('/dashboard');
-    } else {
-      setError('Email already in use.');
+    } catch (err: any) {
+      setError(err.message || 'Registration failed.');
     }
   };
 
   const handleGoogleSignIn = async () => {
     setError(null);
-    const success = await loginWithGoogle();
-    if (success) {
+    try {
+      await signInWithGoogle();
       navigate('/dashboard');
-    } else {
-      setError('Google sign-in failed.');
+    } catch (err: any) {
+      setError(err.message || 'Google sign-in failed.');
     }
   };
 
