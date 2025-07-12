@@ -239,7 +239,7 @@ const LeaderboardPage: React.FC = () => {
                     alt={userRank.displayName}
                     className="w-12 h-12 rounded-full"
                   />
-                  <div>
+            <div>
                     <div className="font-semibold text-gray-900 dark:text-white">
                       {userRank.displayName}
                     </div>

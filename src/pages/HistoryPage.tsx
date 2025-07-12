@@ -189,7 +189,7 @@ const HistoryPage: React.FC = () => {
           className="text-center mb-8"
         >
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Debate History
+          Debate History
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
             Track your performance and analyze your debating journey
@@ -322,7 +322,7 @@ const HistoryPage: React.FC = () => {
                       alt={debate.opponent.name}
                       className="w-10 h-10 rounded-full"
                     />
-                    <div>
+                  <div>
                       <div className="font-medium text-gray-900 dark:text-white">
                         {debate.opponent.name}
                       </div>
@@ -417,7 +417,7 @@ const HistoryPage: React.FC = () => {
           </motion.div>
         )}
       </div>
-    </div>
+      </div>
     </Layout>
   );
 };

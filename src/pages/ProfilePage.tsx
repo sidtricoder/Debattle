@@ -142,13 +142,13 @@ const ProfilePage: React.FC = () => {
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-4">
                 {isEditing ? (
-                  <input
+                <input
                     type="text"
                     value={editForm.displayName}
                     onChange={(e) => setEditForm({ ...editForm, displayName: e.target.value })}
                     className="text-3xl font-bold text-gray-900 dark:text-white bg-transparent border-b-2 border-blue-500 focus:outline-none"
-                  />
-                ) : (
+                />
+              ) : (
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                     {user?.displayName}
                   </h1>
@@ -469,11 +469,11 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
+          </div>
           )}
         </motion.div>
       </div>
-    </div>
+      </div>
     </Layout>
   );
 };

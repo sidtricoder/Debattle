@@ -181,17 +181,17 @@ export const useAuthStore = create<AuthStore>()(
             username: credentials.username,
             photoURL: '',
             rating: 1200,
-            provisionalRating: true,
-            gamesPlayed: 0,
-            wins: 0,
-            losses: 0,
-            draws: 0,
-            winStreak: 0,
-            bestWinStreak: 0,
+    provisionalRating: true,
+    gamesPlayed: 0,
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    winStreak: 0,
+    bestWinStreak: 0,
             win_rate: 0,
-            achievements: [],
-            xp: 0,
-            level: 1,
+    achievements: [],
+    xp: 0,
+    level: 1,
             tier: 'bronze',
             created_at: new Date(),
             last_active: new Date(),
@@ -252,9 +252,9 @@ export const useAuthStore = create<AuthStore>()(
           console.error('Sign out error:', error);
           // Even if Firebase sign out fails, clear local state
           set({ 
-            user: null, 
+    user: null,
             loading: false, 
-            isAuthenticated: false,
+    isAuthenticated: false,
             error: null 
           });
           localStorage.removeItem('debattle_user');

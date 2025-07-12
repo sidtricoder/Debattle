@@ -119,7 +119,7 @@ const PracticePage: React.FC = () => {
           className="text-center mb-8"
         >
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Practice Mode
+          Practice Mode
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
             Hone your debating skills with our AI opponents. Practice different topics, 
@@ -354,7 +354,7 @@ const PracticePage: React.FC = () => {
           </div>
         </motion.div>
       </div>
-    </div>
+      </div>
     </Layout>
   );
 };
