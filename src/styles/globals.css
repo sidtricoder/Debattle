@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white dark:bg-dark text-primary dark:text-white min-h-screen antialiased transition-colors duration-300;
+  font-family: 'Inter', 'system-ui', 'sans-serif';
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+:focus {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+@import 'aos/dist/aos.css';
