@@ -74,6 +74,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
   const [pendingArguments, setPendingArguments] = useState<DebateArgument[]>([]);
   // Add local state for submitted arguments
   const [localSubmittedArguments, setLocalSubmittedArguments] = useState<DebateArgument[]>([]);
+  const [isJudging, setIsJudging] = useState(false);
   
   const argumentInputRef = useRef<HTMLTextAreaElement>(null);
   const debateContainerRef = useRef<HTMLDivElement>(null);
@@ -337,7 +338,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
   // Handle debate end
   const handleEndDebate = async () => {
     if (!currentDebate || !debateId) return;
-
+    setIsJudging(true);
     try {
       const judgment = await geminiService.judgeDebate(
         currentDebate.topic,
@@ -354,11 +355,12 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
           stance: p.stance
         }))
       );
-
       await endDebate(debateId, judgment);
       setShowJudgment(true);
     } catch (error) {
       console.error('Failed to end debate:', error);
+    } finally {
+      setIsJudging(false);
     }
   };
 
@@ -488,15 +490,59 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
 
   // After currentDebate is loaded, check if it has zero arguments and delete if so
   const [deleted, setDeleted] = useState(false);
+  const [deleteCountdown, setDeleteCountdown] = useState<number | null>(null);
+  const deleteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Start countdown if debate has zero arguments
   useEffect(() => {
-    if (currentDebate && currentDebate.arguments && currentDebate.arguments.length === 0) {
-      const debateRef = doc(firestore, 'debates', currentDebate.id);
-      deleteDoc(debateRef).then(() => {
-        setDeleted(true);
-        navigate('/find-debate');
-      });
+    if (
+      currentDebate &&
+      Array.isArray(currentDebate.arguments) &&
+      currentDebate.arguments.length === 0 &&
+      currentDebate.id
+    ) {
+      setDeleteCountdown(60); // 60 seconds countdown
+      if (deleteTimeoutRef.current) clearTimeout(deleteTimeoutRef.current);
+      // Start interval to update countdown
+      const interval = setInterval(() => {
+        setDeleteCountdown(prev => {
+          if (prev === null) return null;
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      // Set timeout to delete debate after 60 seconds
+      deleteTimeoutRef.current = setTimeout(() => {
+        const debateRef = doc(firestore, 'debates', currentDebate.id);
+        deleteDoc(debateRef).then(() => {
+          setDeleted(true);
+          navigate('/find-debate');
+        });
+      }, 60000);
+      return () => {
+        clearInterval(interval);
+        if (deleteTimeoutRef.current) clearTimeout(deleteTimeoutRef.current);
+      };
+    } else {
+      setDeleteCountdown(null);
+      if (deleteTimeoutRef.current) clearTimeout(deleteTimeoutRef.current);
     }
   }, [currentDebate, navigate]);
+
+  // Cancel timer if an argument is submitted
+  useEffect(() => {
+    if (
+      currentDebate &&
+      Array.isArray(currentDebate.arguments) &&
+      currentDebate.arguments.length > 0
+    ) {
+      setDeleteCountdown(null);
+      if (deleteTimeoutRef.current) clearTimeout(deleteTimeoutRef.current);
+    }
+  }, [currentDebate]);
 
   if (deleted) {
     return (
@@ -572,11 +618,24 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
     <div className="relative min-h-screen w-full flex flex-col bg-black text-white" style={{background: '#000'}}>
       {/* Main chat area with WhatsApp-like layout */}
       <div className="flex-1 flex flex-col justify-end px-2 md:px-8 py-6 overflow-y-auto" ref={debateContainerRef} style={{height: 'calc(100vh - 120px)'}}>
+        {isJudging && (
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-80">
+            <div className="w-64 h-2 bg-gray-700 rounded-full overflow-hidden mb-6">
+              <div className="h-full bg-gradient-to-r from-blue-400 to-blue-600 animate-pulse" style={{ width: '100%' }}></div>
+            </div>
+            <div className="text-white text-lg font-semibold">Your debate is being evaluated...</div>
+          </div>
+        )}
         {currentDebate.arguments.length === 0 && pendingArguments.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
             <MessageSquare className="w-12 h-12 mb-4 text-gray-600" />
             <p className="text-lg font-medium">No arguments yet. Be the first to strike! ⚔️</p>
             <p className="text-sm text-gray-500 mt-2">Start the debate with a powerful opening argument</p>
+            {deleteCountdown !== null && (
+              <div className="mt-4 text-red-400 text-base font-semibold">
+                This debate will be deleted in {deleteCountdown} second{deleteCountdown !== 1 ? 's' : ''} if no argument is made.
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -736,6 +795,38 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
           </div>
         )}
       </div>
+      {/* After the chat area, but before the modals, add a new section for winner and scores if debate is completed and judgment is present */}
+      {isDebateCompleted && currentDebate.judgment && (() => {
+        const judgment = currentDebate.judgment;
+        return (
+          <div className="w-full max-w-2xl mx-auto mt-8 p-6 bg-[#181a22] rounded-2xl border border-gray-700 text-white">
+            <div className="text-xl font-bold mb-2 flex items-center gap-2">
+              <span>🏆 Winner:</span>
+              <span className="text-green-400">
+                {currentDebate.participants.find(
+                  p => p.userId === Object.keys(judgment.scores || {}).find(uid => uid === judgment.winner) || judgment.winner
+                )?.displayName || judgment.winner}
+              </span>
+            </div>
+            <div className="flex flex-col md:flex-row gap-4 mt-2">
+              {Object.entries(judgment.scores || {}).map(([uid, score]) => {
+                const participant = currentDebate.participants.find(p => p.userId === uid || p.displayName === uid);
+                return (
+                  <div key={uid} className="flex-1 bg-[#101014] rounded-xl p-4 border border-gray-800">
+                    <div className="font-semibold text-lg mb-1">{participant?.displayName || uid}</div>
+                    <div className="text-2xl font-bold text-blue-400 mb-2">{typeof score === 'number' ? score.toFixed(1) : score}/10</div>
+                    <ul className="text-sm text-gray-300 list-disc pl-5">
+                      {(judgment.feedback?.[uid] || []).map((fb, i) => (
+                        <li key={i}>{fb}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
       {/* Modals, overlays, and toasts remain unchanged below */}
 
       {/* Coaching Tip Modal */}
@@ -763,7 +854,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
               {/* Winner */}
               <div className="text-center">
                 <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                  🏆 Winner: {currentDebate.participants.find(p => p.userId === currentDebate.judgment?.winner)?.displayName}
+                  🏆 Winner: {currentDebate.participants.find(p => p.userId === currentDebate.judgment?.winner)?.displayName || 'N/A'}
                 </h3>
                 <p className="text-gray-600">{currentDebate.judgment.reasoning}</p>
               </div>
@@ -774,7 +865,9 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
                   <div key={participant.userId} className="p-4 border rounded-lg">
                     <h4 className="font-semibold mb-2">{participant.displayName}</h4>
                     <div className="text-2xl font-bold text-blue-600 mb-2">
-                      {currentDebate.judgment?.scores[participant.userId]}/10
+                      {typeof currentDebate.judgment?.scores[participant.userId] === 'number'
+                        ? `${Number(currentDebate.judgment.scores[participant.userId]).toFixed(1)}/10`
+                        : 'N/A'}
                     </div>
                     <div className="space-y-1">
                       {currentDebate.judgment?.feedback[participant.userId]?.map((feedback, index) => (
