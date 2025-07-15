@@ -68,7 +68,7 @@ const Footer: React.FC = () => {
   ];
 
   return (
-    <footer className="bg-background border-t border-border">
+    <footer className="bg-background dark:bg-gray-950 border-t border-border dark:border-gray-800 text-foreground dark:text-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
@@ -89,7 +89,7 @@ const Footer: React.FC = () => {
                 </span>
               </Link>
             </motion.div>
-            <p className="text-secondary text-sm mb-4">
+            <p className="text-secondary dark:text-gray-300 text-sm mb-4">
               The ultimate platform for intelligent debates, AI-powered judging, and skill development.
             </p>
             <div className="flex space-x-4">
@@ -101,7 +101,7 @@ const Footer: React.FC = () => {
                   rel="noopener noreferrer"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="p-2 rounded-lg bg-secondary/10 hover:bg-secondary/20 transition-colors"
+                  className="p-2 rounded-lg bg-secondary/10 dark:bg-gray-800 hover:bg-secondary/20 dark:hover:bg-gray-700 transition-colors"
                   aria-label={social.name}
                 >
                   <social.icon size={20} />
@@ -117,13 +117,13 @@ const Footer: React.FC = () => {
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
           >
-            <h3 className="font-semibold text-foreground mb-4">Product</h3>
+            <h3 className="font-semibold text-foreground dark:text-white mb-4">Product</h3>
             <ul className="space-y-2">
               {footerLinks.product.map((link) => (
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-secondary hover:text-primary transition-colors text-sm"
+                    className="text-secondary dark:text-gray-300 hover:text-primary dark:hover:text-white transition-colors text-sm"
                   >
                     {link.name}
                   </Link>
@@ -139,13 +139,13 @@ const Footer: React.FC = () => {
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
           >
-            <h3 className="font-semibold text-foreground mb-4">Company</h3>
+            <h3 className="font-semibold text-foreground dark:text-white mb-4">Company</h3>
             <ul className="space-y-2">
               {footerLinks.company.map((link) => (
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-secondary hover:text-primary transition-colors text-sm"
+                    className="text-secondary dark:text-gray-300 hover:text-primary dark:hover:text-white transition-colors text-sm"
                   >
                     {link.name}
                   </Link>
@@ -161,13 +161,13 @@ const Footer: React.FC = () => {
             viewport={{ once: true }}
             transition={{ delay: 0.3 }}
           >
-            <h3 className="font-semibold text-foreground mb-4">Support</h3>
+            <h3 className="font-semibold text-foreground dark:text-white mb-4">Support</h3>
             <ul className="space-y-2">
               {footerLinks.support.map((link) => (
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-secondary hover:text-primary transition-colors text-sm"
+                    className="text-secondary dark:text-gray-300 hover:text-primary dark:hover:text-white transition-colors text-sm"
                   >
                     {link.name}
                   </Link>
@@ -176,25 +176,6 @@ const Footer: React.FC = () => {
             </ul>
           </motion.div>
         </div>
-
-        {/* Features Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 pt-8 border-t border-border"
-        >
-          {features.map((feature, index) => (
-            <div key={feature.title} className="text-center">
-              <div className="w-12 h-12 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center mx-auto mb-3">
-                <feature.icon size={24} className="text-white" />
-              </div>
-              <h4 className="font-semibold text-foreground mb-2">{feature.title}</h4>
-              <p className="text-secondary text-sm">{feature.description}</p>
-            </div>
-          ))}
-        </motion.div>
 
         {/* Bottom Section */}
         <motion.div
@@ -205,7 +186,7 @@ const Footer: React.FC = () => {
           className="pt-8 border-t border-border"
         >
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="flex items-center space-x-4 text-sm text-secondary">
+            <div className="flex items-center space-x-4 text-sm text-secondary dark:text-gray-400">
               <span>&copy; {currentYear} Debattle. All rights reserved.</span>
               <div className="flex items-center space-x-2">
                 <span>Made with</span>
@@ -219,7 +200,7 @@ const Footer: React.FC = () => {
                 <Link
                   key={link.name}
                   to={link.href}
-                  className="text-secondary hover:text-primary transition-colors text-sm"
+                  className="text-secondary dark:text-gray-300 hover:text-primary dark:hover:text-white transition-colors text-sm"
                 >
                   {link.name}
                 </Link>

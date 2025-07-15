@@ -1,325 +1,392 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, Clock, Users, TrendingUp, Zap, Target } from 'lucide-react';
-import { useAuthStore } from '../stores/authStore';
-import { useDebateStore } from '../stores/debateStore';
-import Layout from '../components/layout/Layout';
-
-interface Topic {
-  id: string;
-  title: string;
-  category: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  popularity: number;
-  description: string;
-}
-
-const topics: Topic[] = [
-  {
-    id: '1',
-    title: 'Should social media platforms be regulated?',
-    category: 'Technology',
-    difficulty: 'medium',
-    popularity: 95,
-    description: 'Debate the role of government in regulating social media content and user privacy.'
-  },
-  {
-    id: '2',
-    title: 'Is remote work better than office work?',
-    category: 'Business',
-    difficulty: 'easy',
-    popularity: 88,
-    description: 'Compare the benefits and drawbacks of remote work versus traditional office environments.'
-  },
-  {
-    id: '3',
-    title: 'Should college education be free?',
-    category: 'Education',
-    difficulty: 'hard',
-    popularity: 92,
-    description: 'Discuss the economic and social implications of free higher education.'
-  },
-  {
-    id: '4',
-    title: 'Are electric vehicles truly environmentally friendly?',
-    category: 'Environment',
-    difficulty: 'medium',
-    popularity: 85,
-    description: 'Examine the full environmental impact of electric vehicles from production to disposal.'
-  },
-  {
-    id: '5',
-    title: 'Should AI development be paused?',
-    category: 'Technology',
-    difficulty: 'hard',
-    popularity: 90,
-    description: 'Debate whether we should slow down AI development for safety considerations.'
-  }
-];
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { 
+  Search, 
+  Filter, 
+  Zap, 
+  Brain, 
+  Trophy, 
+  Users, 
+  Target, 
+  Star, 
+  Clock, 
+  TrendingUp,
+  Sparkles,
+  Crown,
+  Shield,
+  Sword,
+  Flame,
+  ArrowRight,
+  Play
+} from 'lucide-react';
+import { useAuth } from '../components/auth/AuthProvider';
+import { firestore } from '../lib/firebase';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import Footer from '../components/layout/Footer';
 
 const FindDebatePage: React.FC = () => {
-  const { user } = useAuthStore();
-  const navigate = useNavigate();
-  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-  const [isFindingMatch, setIsFindingMatch] = useState(false);
+  const [topics, setTopics] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showMatchmaking, setShowMatchmaking] = useState(false);
+
+  useEffect(() => {
+    const fetchTopics = async () => {
+      try {
+        const topicsQuery = query(
+          collection(firestore, 'topics'),
+          orderBy('popularity', 'desc'),
+          limit(20)
+        );
+        const topicsSnapshot = await getDocs(topicsQuery);
+        const topicsData = topicsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setTopics(topicsData);
+      } catch (error) {
+        console.error('Error fetching topics:', error);
+        // Fallback data
+        setTopics([
+          {
+            id: '1',
+            title: 'Should social media platforms be regulated?',
+            category: 'Technology',
+            difficulty: 7,
+            popularity: 95,
+            description: 'Debate the role of government in regulating social media content and user privacy.'
+          },
+          {
+            id: '2',
+            title: 'Is remote work better than office work?',
+            category: 'Business',
+            difficulty: 6,
+            popularity: 88,
+            description: 'Compare the benefits and drawbacks of remote work versus traditional office environments.'
+          },
+          {
+            id: '3',
+            title: 'Should college education be free?',
+            category: 'Education',
+            difficulty: 8,
+            popularity: 92,
+            description: 'Discuss the feasibility and implications of making higher education accessible to all.'
+          }
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTopics();
+  }, []);
+
+  const categories = [
+    { name: 'all', label: 'All Topics', icon: Target, emoji: '🎯' },
+    { name: 'technology', label: 'Technology', icon: Zap, emoji: '⚡' },
+    { name: 'politics', label: 'Politics', icon: Crown, emoji: '👑' },
+    { name: 'business', label: 'Business', icon: TrendingUp, emoji: '📈' },
+    { name: 'education', label: 'Education', icon: Brain, emoji: '🧠' },
+    { name: 'society', label: 'Society', icon: Users, emoji: '👥' }
+  ];
+
+  const difficulties = [
+    { value: 'all', label: 'All Levels', emoji: '🌟' },
+    { value: 'easy', label: 'Easy (1-3)', emoji: '😊' },
+    { value: 'medium', label: 'Medium (4-6)', emoji: '🤔' },
+    { value: 'hard', label: 'Hard (7-9)', emoji: '🔥' },
+    { value: 'expert', label: 'Expert (10)', emoji: '💎' }
+  ];
 
   const filteredTopics = topics.filter(topic => {
     const matchesSearch = topic.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          topic.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || topic.category === selectedCategory;
-    const matchesDifficulty = selectedDifficulty === 'all' || topic.difficulty === selectedDifficulty;
+    const matchesCategory = selectedCategory === 'all' || topic.category.toLowerCase() === selectedCategory;
+    const matchesDifficulty = selectedDifficulty === 'all' || 
+      (selectedDifficulty === 'easy' && topic.difficulty <= 3) ||
+      (selectedDifficulty === 'medium' && topic.difficulty >= 4 && topic.difficulty <= 6) ||
+      (selectedDifficulty === 'hard' && topic.difficulty >= 7 && topic.difficulty <= 9) ||
+      (selectedDifficulty === 'expert' && topic.difficulty === 10);
     
     return matchesSearch && matchesCategory && matchesDifficulty;
   });
 
-  const categories = ['all', ...Array.from(new Set(topics.map(t => t.category)))];
-
-  const handleFindMatch = async (topic: Topic) => {
-    if (!user) {
-      alert('Please sign in to find a match');
-      return;
-    }
-    
-    setIsFindingMatch(true);
-    setSelectedTopic(topic);
-    
-    try {
-      // Join queue with topic preferences
-      await useDebateStore.getState().joinQueue(user.uid, {
-        topics: [topic.title],
-        difficulty: topic.difficulty === 'easy' ? 3 : topic.difficulty === 'medium' ? 6 : 9,
-        timeLimit: 3600
-      });
-      
-      // Try to find a match
-      const debate = await useDebateStore.getState().findMatch(user.uid);
-      
-      if (debate) {
-        navigate(`/debate/${debate.id}`);
-      } else {
-        // If no match found, create a new debate
-        const debateId = await useDebateStore.getState().createDebate(
-          topic.title,
-          topic.category.toLowerCase(),
-          topic.difficulty === 'easy' ? 3 : topic.difficulty === 'medium' ? 6 : 9
-        );
-        navigate(`/debate/${debateId}`);
-      }
-    } catch (error) {
-      console.error('Failed to find match:', error);
-      alert('Failed to find a match. Please try again.');
-    } finally {
-      setIsFindingMatch(false);
-    }
+  const getDifficultyColor = (difficulty: number) => {
+    if (difficulty <= 3) return 'from-green-400 to-emerald-500';
+    if (difficulty <= 6) return 'from-yellow-400 to-orange-500';
+    if (difficulty <= 9) return 'from-red-400 to-pink-500';
+    return 'from-purple-400 to-indigo-500';
   };
 
-  const handleCreateDebate = async (topic: Topic) => {
-    if (!user) {
-      alert('Please sign in to create a debate');
-      return;
-    }
-    
-    try {
-      const debateId = await useDebateStore.getState().createDebate(
-        topic.title,
-        topic.category.toLowerCase(),
-        topic.difficulty === 'easy' ? 3 : topic.difficulty === 'medium' ? 6 : 9
-      );
-      
-      // Join the debate as pro
-      await useDebateStore.getState().joinDebate(debateId, user.uid, 'pro');
-      
-      navigate(`/debate/${debateId}`);
-    } catch (error) {
-      console.error('Failed to create debate:', error);
-      alert('Failed to create debate. Please try again.');
-    }
+  const getDifficultyEmoji = (difficulty: number) => {
+    if (difficulty <= 3) return '😊';
+    if (difficulty <= 6) return '🤔';
+    if (difficulty <= 9) return '🔥';
+    return '💎';
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 via-indigo-50 to-purple-100 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"
+        />
+      </div>
+    );
+  }
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="container mx-auto px-6 py-8">
-          {/* Header */}
+    <div className="min-h-screen bg-gradient-to-b from-blue-600 via-purple-600 to-indigo-600 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 flex flex-col">
+      <div className="relative overflow-hidden flex-1">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none"></div>
+        <div className="relative z-10 container mx-auto px-6 py-12">
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
+            transition={{ duration: 0.8 }}
           >
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Find Your Next Debate
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Choose from trending topics or create your own debate. Challenge opponents 
-              and climb the leaderboard with every victory.
-            </p>
-          </motion.div>
-
-          {/* Search and Filters */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8"
-          >
-            <div className="flex flex-col md:flex-row gap-4">
-              {/* Search */}
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Search topics..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+            <div className="flex flex-col items-center">
+              <div className="inline-flex items-center gap-3 mb-6">
+                <div className="w-16 h-16 bg-gradient-to-b from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-2xl">
+                  <Target className="w-8 h-8 text-white" />
+                </div>
+                <div className="text-left">
+                  <h1 className="text-4xl font-bold text-white mb-2">
+                    Find Your Perfect <span className="text-transparent bg-clip-text bg-gradient-to-b from-yellow-400 to-orange-500">Battle</span>
+                  </h1>
+                  <p className="text-xl text-blue-100">
+                    Choose from thousands of topics and challenge worthy opponents
+                  </p>
+                </div>
               </div>
-
-              {/* Category Filter */}
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'All Categories' : category}
-                  </option>
-                ))}
-              </select>
-
-              {/* Difficulty Filter */}
-              <select
-                value={selectedDifficulty}
-                onChange={(e) => setSelectedDifficulty(e.target.value)}
-                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Difficulties</option>
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
+              {/* Search Bar */}
+              <div className="w-full max-w-2xl mb-8">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search for debate topics..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm border border-white/20 rounded-2xl text-gray-800 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent shadow-xl"
+                  />
+                </div>
+              </div>
+              {/* Filters */}
+              <div className="w-full mb-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                    <Filter className="w-5 h-5 text-blue-500" />
+                    Filter Topics
+                  </h2>
+                  <div className="text-2xl">🔍</div>
+                </div>
+                {/* Categories */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Categories</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {categories.map((category) => {
+                      const Icon = category.icon;
+                      const isActive = selectedCategory === category.name;
+                      return (
+                        <button
+                          key={category.name}
+                          onClick={() => setSelectedCategory(category.name)}
+                          className={`p-3 rounded-xl transition-all duration-300 ${
+                            isActive
+                              ? 'bg-blue-50 dark:bg-blue-900'
+                              : 'bg-gray-50 dark:bg-gray-800'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-2xl mb-1">{category.emoji}</div>
+                            <div className={`text-sm font-medium ${
+                              isActive ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-300'
+                            }`}>
+                              {category.label}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {/* Difficulty Levels */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Difficulty Level</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {difficulties.map((difficulty) => {
+                      const isActive = selectedDifficulty === difficulty.value;
+                      return (
+                        <button
+                          key={difficulty.value}
+                          onClick={() => setSelectedDifficulty(difficulty.value)}
+                          className={`p-3 rounded-xl transition-all duration-300 ${
+                            isActive
+                              ? 'bg-yellow-50 dark:bg-yellow-900'
+                              : 'bg-gray-50 dark:bg-gray-800'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-2xl mb-1">{difficulty.emoji}</div>
+                            <div className={`text-sm font-medium ${
+                              isActive ? 'text-yellow-700 dark:text-yellow-300' : 'text-gray-600 dark:text-gray-300'
+                            }`}>
+                              {difficulty.label}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
-          </motion.div>
-
-          {/* Topics Grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {filteredTopics.map((topic, index) => (
+            {/* Topics Grid */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              {filteredTopics.map((topic, index) => (
+                <div
+                  key={topic.id}
+                  className="bg-gradient-to-b from-white via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-blue-950 dark:to-indigo-950 rounded-3xl overflow-hidden transition-all duration-300"
+                >
+                  <div className="p-6">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`px-3 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-b ${getDifficultyColor(topic.difficulty)}`}> 
+                        {getDifficultyEmoji(topic.difficulty)} {topic.difficulty}/10
+                      </div>
+                      <div className="flex items-center gap-1 text-yellow-500">
+                        <Star className="w-4 h-4 fill-current" />
+                        <span className="text-sm font-medium">{topic.popularity}%</span>
+                      </div>
+                    </div>
+                    {/* Title */}
+                    <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3 leading-tight">
+                      {topic.title}
+                    </h3>
+                    {/* Description */}
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 leading-relaxed">
+                      {topic.description}
+                    </p>
+                    {/* Category */}
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{topic.category}</span>
+                    </div>
+                    {/* Actions */}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowMatchmaking(true)}
+                        className="flex-1 bg-gradient-to-b from-blue-500 to-indigo-600 text-white py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2"
+                      >
+                        <Zap className="w-4 h-4" />
+                        Quick Match
+                      </button>
+                      <button
+                        className="px-4 py-3 text-gray-600 dark:text-gray-300 rounded-xl flex items-center justify-center"
+                      >
+                        <Play className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+            {/* No Results */}
+            {filteredTopics.length === 0 && (
               <motion.div
-                key={topic.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-200"
+                transition={{ duration: 0.8, delay: 0.8 }}
+                className="text-center py-12"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      topic.difficulty === 'easy' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      topic.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {topic.difficulty}
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {topic.category}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-yellow-500">
-                    <TrendingUp className="w-4 h-4" />
-                    <span className="text-sm font-medium">{topic.popularity}%</span>
-                  </div>
-                </div>
-
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                  {topic.title}
-                </h3>
-                
-                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                  {topic.description}
-                </p>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleFindMatch(topic)}
-                    disabled={isFindingMatch}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {isFindingMatch && selectedTopic?.id === topic.id ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Finding Match...
-                      </>
-                    ) : (
-                      <>
-                        <Target className="w-4 h-4" />
-                        Find Match
-                      </>
-                    )}
-                  </button>
-                  
-                  <button
-                    onClick={() => handleCreateDebate(topic)}
-                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Create
-                  </button>
-                </div>
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">No topics found</h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">Try adjusting your search or filters</p>
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedCategory('all');
+                    setSelectedDifficulty('all');
+                  }}
+                  className="bg-gradient-to-b from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-300"
+                >
+                  Clear Filters
+                </button>
               </motion.div>
-            ))}
-          </motion.div>
-
-          {/* Quick Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mt-12 grid md:grid-cols-3 gap-6"
-          >
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Avg. Wait Time
-              </h3>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">45s</p>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Active Players
-              </h3>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">1,247</p>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Your Rating
-              </h3>
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {user?.rating || 1200}
-              </p>
-            </div>
+            )}
           </motion.div>
         </div>
       </div>
-    </Layout>
+
+      {/* Matchmaking Modal */}
+      <AnimatePresence>
+        {showMatchmaking && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gradient-to-b from-white via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-blue-950 dark:to-indigo-950 rounded-3xl p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="text-center">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="w-16 h-16 bg-gradient-to-b from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl"
+                >
+                  <Zap className="w-8 h-8 text-white" />
+                </motion.div>
+                <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">
+                  Finding Your Opponent...
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  Searching for the perfect debate partner. This usually takes 10-30 seconds.
+                </p>
+                <div className="flex items-center justify-center gap-2 mb-6">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowMatchmaking(false)}
+                    className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 py-3 px-4 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="flex-1 bg-gradient-to-b from-yellow-400 to-orange-500 text-white py-3 px-4 rounded-xl font-semibold hover:from-yellow-500 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  >
+                    <Link to="/practice" className="flex items-center justify-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      Practice Mode
+                    </Link>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <Footer />
+    </div>
   );
 };
 

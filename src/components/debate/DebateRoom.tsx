@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useDebateStore } from '../../stores/debateStore';
+import type { DebateArgument } from '../../stores/debateStore';
 import { useAuthStore } from '../../stores/authStore';
 import { geminiService } from '../../services/ai/gemini';
 import { Card } from '../ui/Card';
@@ -13,8 +15,26 @@ import { Toast } from '../ui/Toast';
 import { LoadingSpinner } from '../animations/LoadingSpinner';
 import { TypingIndicator } from '../animations/TypingIndicator';
 import { ConfettiAnimation } from '../animations/ConfettiAnimation';
-import { onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { firestore } from '../../lib/firebase';
+import { 
+  Zap, 
+  Clock, 
+  Target, 
+  Trophy, 
+  Brain, 
+  MessageSquare, 
+  Send as SendIcon, 
+  X, 
+  Crown,
+  Flame,
+  Star,
+  Award,
+  TrendingUp,
+  Mic,
+  Flag
+} from 'lucide-react';
+// Remove: import { Client } from "@gradio/client";
 
 interface DebateRoomProps {
   debateId?: string;
@@ -49,9 +69,43 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
   const [isMyTurn, setIsMyTurn] = useState(false);
   const [showWinner, setShowWinner] = useState(false);
   const [lastAIGeneratedArgumentId, setLastAIGeneratedArgumentId] = useState<string | null>(null);
+  const [isAITyping, setIsAITyping] = useState(false);
+  const [optimisticArguments, setOptimisticArguments] = useState<DebateArgument[]>([]);
+  const [pendingArguments, setPendingArguments] = useState<DebateArgument[]>([]);
+  // Add local state for submitted arguments
+  const [localSubmittedArguments, setLocalSubmittedArguments] = useState<DebateArgument[]>([]);
   
   const argumentInputRef = useRef<HTMLTextAreaElement>(null);
   const debateContainerRef = useRef<HTMLDivElement>(null);
+  const [inputHeight, setInputHeight] = useState(64); // px, default height for textarea
+  const dragHandleRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+  const lastYRef = useRef(0);
+
+  // Add state for voice input (Hugging Face Whisper 2-step fetch)
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false); // Kept for UI compatibility
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Add browser detection for Brave and Firefox
+  const [isBraveOrFirefox, setIsBraveOrFirefox] = useState(false);
+
+  // Helper: Convert Blob to base64 (if needed)
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result.split(',')[1]); // Remove data:...;base64,
+        } else {
+          reject('Failed to convert blob to base64');
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
 
   // Debug logging
   useEffect(() => {
@@ -140,6 +194,30 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
     }
   }, [currentDebate?.arguments]);
 
+  // Drag logic for input box resizing
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!draggingRef.current) return;
+      const delta = e.clientY - lastYRef.current;
+      setInputHeight(prev => Math.max(48, Math.min(240, prev + delta * -1)));
+      lastYRef.current = e.clientY;
+    };
+    const onMouseUp = () => {
+      draggingRef.current = false;
+      document.body.style.cursor = '';
+    };
+    if (draggingRef.current) {
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = 'ns-resize';
+    }
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+    };
+  }, [draggingRef.current]);
+
   // Get coaching tip
   const getCoachingTip = async () => {
     if (!currentDebate || !currentUser) return;
@@ -170,10 +248,21 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
 
     setIsSubmitting(true);
     try {
-      console.log('[DEBUG] handleSubmitArgument called');
-      await submitArgument(debateId, currentUser.uid, argument.trim());
+      // Local instant UI: add the argument to pendingArguments
+      const localArg: DebateArgument = {
+        id: `local_${Date.now()}`,
+        userId: currentUser.uid,
+        content: argument.trim(),
+        timestamp: Date.now(),
+        round: currentDebate?.currentRound || 1,
+        wordCount: argument.trim().split(' ').length
+      };
+      setPendingArguments(prev => [...prev, localArg]);
       setArgument('');
-      
+      // Add to localSubmittedArguments immediately
+      setLocalSubmittedArguments(prev => [...prev, localArg]);
+      // Update Firebase in background
+      await submitArgument(debateId, currentUser.uid, argument.trim());
       // Get AI feedback for the argument
       const myStance = currentDebate?.participants.find(p => p.userId === currentUser.uid)?.stance;
       if (myStance) {
@@ -186,7 +275,6 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
         // Store AI feedback (you might want to save this to Firebase)
         console.log('[DEBUG] AI Analysis:', analysis);
       }
-
     } catch (error) {
       console.error('[DEBUG] Failed to submit argument:', error);
     } finally {
@@ -208,15 +296,15 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
         lastArg.userId !== 'ai_opponent' &&
         lastAIGeneratedArgumentId !== lastArg.id
       ) {
-        // Only respond if last argument is from user and not already handled
         setLastAIGeneratedArgumentId(lastArg.id);
+        setIsAITyping(true); // AI is about to respond
         // Prepare the full transcript for Gemini
         const transcript = currentDebate.arguments.map(arg => {
           const participant = currentDebate.participants.find(p => p.userId === arg.userId);
           return `${participant?.displayName || arg.userId} (${participant?.stance?.toUpperCase() || ''}): ${arg.content}`;
         }).join('\n');
         console.log('[DEBUG] AI transcript for Gemini:', transcript);
-        generateAIResponseWithTranscript(transcript);
+        generateAIResponseWithTranscript(transcript).finally(() => setIsAITyping(false));
       }
     }
   }, [currentDebate?.arguments, isPracticeMode, currentDebate?.currentTurn, currentDebate?.status, lastAIGeneratedArgumentId]);
@@ -324,34 +412,137 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
     }
   };
 
+  // Remove pending argument when backend version appears (but do NOT remove from localSubmittedArguments)
+  useEffect(() => {
+    if (!currentDebate) return;
+    setPendingArguments(prev => prev.filter(localArg => {
+      return !currentDebate.arguments.some(realArg =>
+        realArg.userId === localArg.userId &&
+        realArg.content === localArg.content &&
+        realArg.round === localArg.round
+      );
+    }));
+  }, [currentDebate?.arguments]);
+
+  // Start recording (MediaRecorder)
+  useEffect(() => {
+    const ua = navigator.userAgent.toLowerCase();
+    const isFirefox = ua.includes('firefox');
+    // Brave detection: navigator.brave is defined, or check for Brave-specific properties
+    const isBrave = (navigator as any).brave && typeof (navigator as any).brave.isBrave === 'function';
+    setIsBraveOrFirefox(isFirefox || isBrave);
+  }, []);
+
+  // Web Speech API: Start recording
+  const handleStartRecording = () => {
+    setVoiceError(null);
+    setIsTranscribing(false);
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      setVoiceError('Web Speech API is not supported in this browser.');
+      return;
+    }
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceError('Web Speech API is not available.');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    setIsRecording(true);
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0].transcript)
+        .join(' ');
+      setArgument((prev) => prev + (prev ? ' ' : '') + transcript);
+      setIsRecording(false);
+    };
+    recognition.onerror = (event: any) => {
+      setVoiceError('Speech recognition error: ' + event.error);
+      setIsRecording(false);
+    };
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+    try {
+      recognition.start();
+    } catch (err: any) {
+      setVoiceError('Could not start speech recognition: ' + (err.message || err));
+      setIsRecording(false);
+    }
+  };
+
+  // Web Speech API: Stop recording
+  const handleStopRecording = () => {
+    if (recognitionRef.current && isRecording) {
+      try {
+        recognitionRef.current.stop();
+      } catch (err) {
+        // ignore
+      }
+      setIsRecording(false);
+    }
+  };
+
+  // After currentDebate is loaded, check if it has zero arguments and delete if so
+  const [deleted, setDeleted] = useState(false);
+  useEffect(() => {
+    if (currentDebate && currentDebate.arguments && currentDebate.arguments.length === 0) {
+      const debateRef = doc(firestore, 'debates', currentDebate.id);
+      deleteDoc(debateRef).then(() => {
+        setDeleted(true);
+        navigate('/find-debate');
+      });
+    }
+  }, [currentDebate, navigate]);
+
+  if (deleted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="text-center">
+          <div className="text-lg font-semibold mb-2">This debate has been deleted.</div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- NEW LAYOUT START ---
+  // Force black background
   if (!debateId) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Debate Not Found</h2>
-          <Button onClick={() => navigate('/find-debate')}>
-            Find a Debate
-          </Button>
+          <div className="text-3xl font-bold mb-4">No Debate ID Provided</div>
+          <div className="mb-2">Please check the URL or start a new debate.</div>
+          </div>
+      </div>
+    );
+  }
+  if (isLoading && !currentDebate) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        <div className="text-center">
+          <div className="text-2xl font-bold mb-4">Loading Debate...</div>
+          <LoadingSpinner size="lg" />
         </div>
       </div>
     );
   }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
   if (!currentDebate) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Loading Debate...</h2>
-          <LoadingSpinner />
-        </div>
+          <div className="text-2xl font-bold mb-4">Debate Not Found or Failed to Load</div>
+          <div className="mb-2">Debug info:</div>
+          <pre className="bg-gray-900 text-green-400 p-4 rounded-xl text-xs text-left max-w-xl mx-auto overflow-x-auto">
+            debateId: {debateId + ''}\n
+            isLoading: {isLoading + ''}\n
+            error: {error + ''}
+          </pre>
+          <Button onClick={() => window.location.reload()} className="mt-4">Reload</Button>
+          </div>
       </div>
     );
   }
@@ -362,389 +553,190 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
   const isDebateActive = currentDebate.status === 'active';
   const isDebateCompleted = currentDebate.status === 'completed';
 
+  // Find the latest message from the current user in local state
+  const latestLocalArg = [...pendingArguments, ...localSubmittedArguments]
+    .filter(arg => arg.userId === currentUser?.uid)
+    .sort((a, b) => b.timestamp - a.timestamp)[0];
+
+  // All previous messages from Firebase, excluding the latest from the current user
+  const firebaseMessages = currentDebate.arguments
+    .filter(arg => !(arg.userId === currentUser?.uid && latestLocalArg && arg.content === latestLocalArg.content && arg.round === latestLocalArg.round))
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  // Compose chat arguments: merge firebaseMessages and latestLocalArg, then sort by timestamp so the latest local user message appears in correct order
+  const chatArguments = latestLocalArg
+    ? [...firebaseMessages, latestLocalArg].sort((a, b) => a.timestamp - b.timestamp)
+    : firebaseMessages;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                {currentDebate.topic}
-                {isPracticeMode && (
-                  <span className="ml-3 text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                    Practice Mode
-                  </span>
-                )}
-              </h1>
-              <div className="flex items-center gap-4">
-                <Badge variant={currentDebate.status === 'active' ? 'success' : 'default'}>
-                  {currentDebate.status.toUpperCase()}
-                </Badge>
-                <Badge variant="primary">
-                  Round {currentDebate.currentRound}/{currentDebate.maxRounds}
-                </Badge>
-                <Badge variant="primary">
-                  {currentDebate.category}
-                </Badge>
-                {isPracticeMode && (
-                  <Badge variant="accent">
-                    AI Opponent
-                  </Badge>
-                )}
-              </div>
-            </div>
-            
-            <div className="text-right">
-              {isDebateActive && (
-                <div className="mb-2">
-                  <div className="text-sm text-gray-600 mb-1">Time Remaining</div>
-                  <div className="text-2xl font-bold text-red-600">
-                    {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
-                  </div>
-                </div>
-              )}
-              
-              {isMyTurn && isDebateActive && (
-                <Badge variant="success" className="animate-pulse">
-                  YOUR TURN
-                </Badge>
-              )}
-            </div>
+    <div className="relative min-h-screen w-full flex flex-col bg-black text-white" style={{background: '#000'}}>
+      {/* Main chat area with WhatsApp-like layout */}
+      <div className="flex-1 flex flex-col justify-end px-2 md:px-8 py-6 overflow-y-auto" ref={debateContainerRef} style={{height: 'calc(100vh - 120px)'}}>
+        {currentDebate.arguments.length === 0 && pendingArguments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <MessageSquare className="w-12 h-12 mb-4 text-gray-600" />
+            <p className="text-lg font-medium">No arguments yet. Be the first to strike! ⚔️</p>
+            <p className="text-sm text-gray-500 mt-2">Start the debate with a powerful opening argument</p>
           </div>
-
-          {/* Participants */}
-          <div className="grid grid-cols-2 gap-4">
-            {currentDebate.participants.map((participant) => (
-              <div
-                key={participant.userId}
-                className={`p-4 rounded-lg border-2 ${
-                  participant.userId === currentUser?.uid
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-800">
-                    {participant.displayName}
-                    {participant.userId === currentUser?.uid && ' (You)'}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={participant.stance === 'pro' ? 'success' : 'error'}>
-                      {participant.stance.toUpperCase()}
-                    </Badge>
-                    <div className={`w-2 h-2 rounded-full ${
-                      participant.isOnline ? 'bg-green-500' : 'bg-gray-400'
-                    }`} />
-                  </div>
-                </div>
-                
-                <div className="text-sm text-gray-600">
-                  Rating: {participant.rating}
-                </div>
-                
-                {participant.isTyping && (
-                  <TypingIndicator />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Debate Arguments */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Card className="h-96">
-              <div className="p-4 border-b">
-                <h3 className="text-lg font-semibold">Debate Arguments</h3>
-              </div>
-              
-              <div 
-                ref={debateContainerRef}
-                className="p-4 h-80 overflow-y-auto space-y-4"
-              >
-                {currentDebate.arguments.length === 0 ? (
-                  <div className="text-center text-gray-500 py-8">
-                    <p>No arguments yet. Be the first to speak!</p>
-                  </div>
-                ) : (
-                  currentDebate.arguments.map((arg) => {
-                    const participant = currentDebate.participants.find(p => p.userId === arg.userId);
-                    const isMyArgument = arg.userId === currentUser?.uid;
-                    
-                    return (
-                      <div
-                        key={arg.id}
-                        className={`p-4 rounded-lg ${
-                          isMyArgument
-                            ? 'bg-blue-100 border-l-4 border-blue-500'
-                            : 'bg-gray-100 border-l-4 border-gray-500'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-800">
-                              {participant?.displayName}
-                            </span>
-                            <Badge variant={participant?.stance === 'pro' ? 'success' : 'error'}>
-                              {participant?.stance.toUpperCase()}
-                            </Badge>
-                            <span className="text-sm text-gray-500">
-                              Round {arg.round}
-                            </span>
-                          </div>
-                          <span className="text-sm text-gray-500">
-                            {new Date(arg.timestamp).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        
-                        <p className="text-gray-700 mb-2">{arg.content}</p>
-                        
-                        <div className="text-sm text-gray-500">
-                          {arg.wordCount} words
-                        </div>
-                        
-                        {arg.aiFeedback && (
-                          <div className="mt-2 p-2 bg-yellow-50 rounded border">
-                            <div className="text-sm font-semibold text-yellow-800 mb-1">
-                              AI Feedback
-                            </div>
-                            <div className="grid grid-cols-3 gap-2 text-xs">
-                              <div>Strength: {arg.aiFeedback.strengthScore}/10</div>
-                              <div>Clarity: {arg.aiFeedback.clarityScore}/10</div>
-                              <div>Evidence: {arg.aiFeedback.evidenceScore}/10</div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </Card>
-
-            {/* Argument Input */}
-            <Card className="mt-4">
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-800">
-                    {isMyTurn ? 'Your Turn - Submit Your Argument' : 'Waiting for opponent...'}
-                  </h3>
-                  {isMyTurn && (
-                    <Button
-                      variant="outline"
-                      onClick={getCoachingTip}
-                      disabled={!currentDebate.arguments.length}
-                    >
-                      Get Coaching Tip
-                    </Button>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  <textarea
-                    ref={argumentInputRef}
-                    value={argument}
-                    onChange={(e) => {
-                      setArgument(e.target.value);
-                      handleTyping(e.target.value.length > 0);
-                    }}
-                    onBlur={() => handleTyping(false)}
-                    placeholder={
-                      isMyTurn
-                        ? "Type your argument here... (Minimum 50 words)"
-                        : "Waiting for your turn..."
-                    }
-                    disabled={!isMyTurn || isSubmitting}
-                    className="w-full h-32 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                  />
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-500">
-                      {argument.length} characters, {argument.split(' ').length} words
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setArgument('')}
-                        disabled={!argument.trim() || !isMyTurn}
-                      >
-                        Clear
-                      </Button>
-                      <Button
-                        onClick={handleSubmitArgument}
-                        disabled={!canSubmit}
-                        loading={isSubmitting}
-                      >
-                        Submit Argument
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                {/* Exit Debate Button */}
-                <div className="flex justify-end mt-4">
-                  <Button
-                    variant="secondary"
-                    onClick={handleExitDebate}
-                  >
-                    Exit Debate
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-4">
-            {/* Practice Tips */}
-            {isPracticeMode && currentDebate.practiceTips && (
-              <Card>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-800 mb-3">Practice Tips</h3>
-                  <div className="space-y-2">
-                    {currentDebate.practiceTips.map((tip, index) => (
-                      <div key={index} className="text-sm text-gray-600 bg-blue-50 p-2 rounded">
-                        • {tip}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {/* AI Personality */}
-            {isPracticeMode && currentDebate.aiPersonality && (
-              <Card>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-800 mb-3">AI Opponent</h3>
-                  <div className="text-sm text-gray-600">
-                    <div className="font-medium mb-1">Personality:</div>
-                    <div>{currentDebate.aiPersonality}</div>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {/* Debate Info */}
-            <Card>
-              <div className="p-4">
-                <h3 className="font-semibold text-gray-800 mb-3">Debate Info</h3>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium">Topic:</span>
-                    <p className="text-gray-600">{currentDebate.topic}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Category:</span>
-                    <span className="text-gray-600 ml-1">{currentDebate.category}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Difficulty:</span>
-                    <span className="text-gray-600 ml-1">{currentDebate.difficulty}/10</span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Total Arguments:</span>
-                    <span className="text-gray-600 ml-1">{currentDebate.arguments.length}</span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Progress */}
-            <Card>
-              <div className="p-4">
-                <h3 className="font-semibold text-gray-800 mb-3">Progress</h3>
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Rounds</span>
-                      <span>{currentDebate.currentRound}/{currentDebate.maxRounds}</span>
-                    </div>
-                    <Progress 
-                      value={(currentDebate.currentRound / currentDebate.maxRounds) * 100} 
+        ) : (
+          <>
+            {/* Merge backend and pending arguments, filter out duplicates */}
+            {chatArguments.map((arg, idx, arr) => {
+              const participant = currentDebate.participants.find(p => p.userId === arg.userId) || myParticipant;
+              const isPro = participant?.stance === 'pro';
+              const isCon = participant?.stance === 'con';
+              const isMine = arg.userId === currentUser?.uid;
+              // Avatar image and alignment by stance (con: left, pro: right)
+              const avatarSrc = isPro ? '/pro-right.png' : '/con-left.png';
+              const alignment = isCon ? 'justify-start' : 'justify-end'; // con: left, pro: right
+              const bubbleAlign = isCon ? 'flex-row' : 'flex-row-reverse';
+              return (
+                <div
+                  key={arg.id}
+                  className={`w-full flex ${alignment} mb-2`}
+                >
+                  <div className={`flex ${bubbleAlign} items-end gap-3`} style={{maxWidth: '80%'}}>
+                    {/* Even Larger Avatar */}
+                    <img
+                      src={avatarSrc}
+                      alt={isPro ? 'Pro' : 'Con'}
+                      className="w-40 h-52 object-contain rounded-3xl border-2 border-gray-700 bg-black shadow-md"
+                      style={{minWidth: 160, minHeight: 208}}
                     />
-                  </div>
-                  
-                  {isDebateActive && (
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Time</span>
-                        <span>{Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}</span>
-                      </div>
-                      <Progress 
-                        value={(timeRemaining / 3600) * 100} 
-                        variant="warning"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-
-            {/* Actions */}
-            <Card>
-              <div className="p-4">
-                <h3 className="font-semibold text-gray-800 mb-3">Actions</h3>
-                <div className="space-y-2">
-                  {isDebateActive && currentDebate.arguments.length >= 6 && (
-                    <Button
-                      variant="secondary"
-                      onClick={handleEndDebate}
-                      className="w-full"
+                    {/* Bubble */}
+                    <div
+                      className={`rounded-2xl px-5 py-3 shadow-lg text-base whitespace-pre-line break-words
+                        ${isPro ? 'bg-[#1a1a1a] text-green-200 border-r-4 border-green-500' : 'bg-[#181a22] text-red-200 border-l-4 border-red-500'}
+                      `}
+                      style={{minWidth: '0', flex: 1}}
                     >
-                      End Debate
-                    </Button>
-                  )}
-                  
-                  {isPracticeMode ? (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate('/practice')}
-                        className="w-full"
-                      >
-                        New Practice Session
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate('/find-debate')}
-                        className="w-full"
-                      >
-                        Try Real Debate
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate('/find-debate')}
-                        className="w-full"
-                      >
-                        Find New Debate
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate('/practice')}
-                        className="w-full"
-                      >
-                        Practice Mode
-                      </Button>
-                    </>
-                  )}
-                  
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate('/history')}
-                    className="w-full"
-                  >
-                    View History
-                  </Button>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-sm">
+                          {participant?.displayName}
+                          {isMine && ' (You)'}
+                        </span>
+                        <Badge variant={isPro ? 'success' : 'error'} className="text-xs">
+                          {participant?.stance?.toUpperCase()}
+                        </Badge>
+                        <span className="text-xs text-gray-400">Round {arg.round}</span>
+                      </div>
+                      <div className="mb-1 text-white/90">{arg.content}</div>
+                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <span>📝 {arg.wordCount} words</span>
+                        <span>{new Date(arg.timestamp).toLocaleTimeString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {/* AI Typing Indicator: only when it's AI's turn and after user's pending argument */}
+            {isAITyping && !isDebateCompleted && currentDebate.currentTurn === 'ai_opponent' && (
+              <div className="w-full flex justify-end mb-2">
+                <div className="flex flex-row-reverse items-end gap-3 max-w-[80%]">
+                  <img
+                    src="/pro-right.png"
+                    alt="AI Opponent"
+                    className="w-32 h-40 object-cover rounded-3xl border-2 border-gray-700 bg-black shadow-md"
+                    style={{minWidth: 128, minHeight: 160}}
+                  />
+                  <div className="rounded-2xl px-5 py-3 shadow-lg text-base bg-[#1a1a1a] border-r-4 border-green-500 flex items-center">
+                    <TypingIndicator />
+                  </div>
                 </div>
               </div>
-            </Card>
-          </div>
-        </div>
+            )}
+          </>
+        )}
       </div>
+      {/* Fixed input at the bottom */}
+      <div className="w-full bg-[#101010] border-t border-gray-800 px-2 md:px-8 py-4 flex flex-col gap-0 sticky bottom-0 z-20" style={{boxShadow: '0 -2px 16px 0 #0008'}}>
+        {/* Drag handle */}
+        <div
+          ref={dragHandleRef}
+          className="w-full h-3 flex items-center justify-center cursor-ns-resize select-none"
+          style={{marginBottom: '2px'}}
+          onMouseDown={e => {
+            draggingRef.current = true;
+            lastYRef.current = e.clientY;
+          }}
+        >
+          <div className="w-16 h-1.5 rounded bg-gray-700" />
+        </div>
+        <div className="flex items-center gap-3">
+          {/* End Debate button on the left */}
+          <Button
+            onClick={handleEndDebate}
+            disabled={!currentDebate || isSubmitting || isDebateCompleted}
+            className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl mr-2 ${isDebateCompleted ? 'opacity-60 cursor-not-allowed' : ''}`}
+            title="End Debate"
+          >
+            <Flag className="w-5 h-5" />
+          </Button>
+          {/* Voice input button: hide on Brave/Firefox */}
+          {!isBraveOrFirefox && (
+            <Button
+              onClick={isRecording ? handleStopRecording : handleStartRecording}
+              disabled={isTranscribing || isSubmitting || isDebateCompleted}
+              className={`px-3 py-2 rounded-xl font-semibold flex items-center gap-2 ${isRecording ? 'bg-red-600 text-white animate-pulse' : 'bg-blue-700 text-white'} ${isTranscribing ? 'opacity-60 cursor-not-allowed' : ''}`}
+              title={isRecording ? 'Stop Recording' : 'Start Voice Input'}
+            >
+              <Mic className="w-5 h-5" />
+            </Button>
+          )}
+          {/* Argument input */}
+          <textarea
+            ref={argumentInputRef}
+            value={argument}
+            onChange={e => {
+              setArgument(e.target.value);
+              handleTyping(e.target.value.length > 0);
+            }}
+            onBlur={() => handleTyping(false)}
+            placeholder={isDebateCompleted ? 'Debate has ended.' : isMyTurn ? 'Type your argument...' : 'Waiting for your turn...'}
+            disabled={!isMyTurn || isSubmitting || isDebateCompleted || isTranscribing}
+            className={`flex-1 rounded-xl px-4 py-3 text-base border-2 focus:ring-2 transition-all duration-200
+              ${isMyTurn && !isDebateCompleted ? 'border-green-500 focus:ring-green-600' : 'border-gray-700'}
+              bg-black text-white placeholder-gray-500
+              ${!isMyTurn || isSubmitting || isDebateCompleted || isTranscribing ? 'opacity-60 cursor-not-allowed' : ''}
+            `}
+            style={{height: inputHeight, minHeight: 48, maxHeight: 240, resize: 'none'}}
+            rows={2}
+          />
+          {/* Send button */}
+          <Button
+            onClick={handleSubmitArgument}
+            disabled={!isMyTurn || !argument.trim() || isSubmitting || isDebateCompleted || isTranscribing}
+            className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2
+              ${isMyTurn && argument.trim() && !isSubmitting && !isDebateCompleted && !isTranscribing ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 shadow-lg hover:shadow-xl' : 'bg-gray-700 text-gray-400 cursor-not-allowed'}
+            `}
+            title="Send Argument"
+          >
+            {isSubmitting ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <SendIcon className="w-5 h-5" />
+            )}
+          </Button>
+        </div>
+        {/* Transcribing/recording status and errors */}
+        {isRecording && (
+          <div className="text-sm text-blue-400 mt-2 flex items-center gap-2 animate-pulse">
+            <span>Recording... Speak now.</span>
+          </div>
+        )}
+        {isTranscribing && (
+          <div className="text-sm text-blue-400 mt-2 flex items-center gap-2 animate-pulse">
+            <span>Transcribing voice input...</span>
+          </div>
+        )}
+        {voiceError && (
+          <div className="text-sm text-red-400 mt-2 flex items-center gap-2">
+            <span>{voiceError}</span>
+          </div>
+        )}
+      </div>
+      {/* Modals, overlays, and toasts remain unchanged below */}
 
       {/* Coaching Tip Modal */}
       <Modal
@@ -765,7 +757,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
         open={showJudgment}
         onClose={() => setShowJudgment(false)}
       >
-        <div className="p-6">
+        <div className="p-6 max-h-[80vh] overflow-y-auto">
           {currentDebate.judgment && (
             <div className="space-y-6">
               {/* Winner */}
@@ -853,7 +845,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
       {/* Judgment Result Modal */}
       {showJudgmentModal && judgmentResult && (
         <Modal open={showJudgmentModal} onClose={() => setShowJudgmentModal(false)}>
-          <div className="p-6" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+          <div className="p-6 max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">AI Debate Result</h3>
             <div className="mb-2"><strong>Winner:</strong> {currentDebate?.participants.find(p => p.userId === judgmentResult.winner)?.displayName || 'N/A'}</div>
             <div className="mb-2"><strong>Reasoning:</strong> {judgmentResult.reasoning}</div>

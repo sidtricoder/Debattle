@@ -1,209 +1,267 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../components/auth/AuthProvider';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Sparkles, Shield, Zap, Brain, Trophy } from 'lucide-react';
 import LoginForm from '../components/auth/LoginForm';
-import RegisterForm from '../components/auth/RegisterForm';
-import { ArrowLeft, Mail } from 'lucide-react';
-
-type AuthMode = 'login' | 'register' | 'forgot-password';
 
 const LoginPage: React.FC = () => {
-  const [mode, setMode] = useState<AuthMode>('login');
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
-  
-  const { user, isAuthenticated, resetPassword, clearError } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, user, navigate, location]);
-
-  const handleForgotPassword = async () => {
-    if (!email) {
-      return;
-    }
-    
-    setIsLoading(true);
-    clearError();
-    try {
-      await resetPassword(email);
-      setResetSent(true);
-    } catch (error) {
-      console.error('Password reset error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleBackToLogin = () => {
-    setMode('login');
-    setResetSent(false);
-    setEmail('');
-    clearError();
-  };
-
-  if (isAuthenticated && user) {
-    return null; // Will redirect in useEffect
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo/Brand */}
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+        
+        {/* Floating Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div
+            animate={{ y: [0, -30, 0], rotate: [0, 10, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-20 left-10 text-6xl opacity-10"
+          >
+            ⚔️
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, 40, 0], rotate: [0, -15, 0] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-40 right-20 text-5xl opacity-10"
+          >
+            🏆
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, -25, 0], x: [0, 20, 0] }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-40 left-20 text-4xl opacity-10"
+          >
+            🧠
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, 35, 0], x: [0, -25, 0] }}
+            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-20 right-10 text-5xl opacity-10"
+          >
+            ⚡
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="relative z-10 container mx-auto px-6 py-6">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center justify-between"
         >
-          <h1 className="text-4xl font-bold text-white mb-2">Debattle</h1>
-          <p className="text-blue-100">The Chess.com of Debating</p>
+          <Link
+            to="/"
+            className="flex items-center space-x-3 group"
+          >
+            <motion.div
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg"
+            >
+              <span className="text-white font-bold text-lg">⚔️</span>
+            </motion.div>
+            <div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+                Debattle
+              </span>
+              <div className="text-xs text-blue-300 font-medium">The Arena of Ideas</div>
+            </div>
+          </Link>
+          
+          <Link
+            to="/register"
+            className="text-white/90 hover:text-white transition-colors font-medium flex items-center gap-2"
+          >
+            <span>Don't have an account?</span>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-lg font-bold hover:from-yellow-500 hover:to-orange-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              Join Now
+            </motion.div>
+          </Link>
         </motion.div>
+      </nav>
 
-        {/* Auth Forms */}
-        <AnimatePresence mode="wait">
-          {mode === 'login' && (
+      {/* Main Content */}
+      <div className="relative z-10 container mx-auto px-6 py-12">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            
+            {/* Left Side - Login Form */}
             <motion.div
-              key="login"
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.8 }}
+              className="order-2 lg:order-1"
             >
-              <LoginForm
-                onSwitchToRegister={() => setMode('register')}
-                onForgotPassword={() => setMode('forgot-password')}
-              />
-            </motion.div>
-          )}
-
-          {mode === 'register' && (
-            <motion.div
-              key="register"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <RegisterForm onSwitchToLogin={() => setMode('login')} />
-            </motion.div>
-          )}
-
-          {mode === 'forgot-password' && (
-            <motion.div
-              key="forgot-password"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3 }}
-              className="w-full max-w-md mx-auto"
-            >
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
-                {!resetSent ? (
-                  <>
-                    <div className="text-center mb-8">
-                      <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                        Reset Password
-                      </h2>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        Enter your email to receive a password reset link
-                      </p>
-                    </div>
-
-                    <form onSubmit={(e) => { e.preventDefault(); handleForgotPassword(); }} className="space-y-6">
-                      <div>
-                        <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Email Address
-                        </label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          <input
-                            type="email"
-                            id="reset-email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors"
-                            placeholder="Enter your email"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="submit"
-                        disabled={isLoading || !email}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                      >
-                        {isLoading ? (
-                          <div className="flex items-center justify-center">
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                            Sending...
-                          </div>
-                        ) : (
-                          'Send Reset Link'
-                        )}
-                      </motion.button>
-                    </form>
-                  </>
-                ) : (
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Mail className="w-8 h-8 text-green-600 dark:text-green-400" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                      Check Your Email
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">
-                      We've sent a password reset link to <strong>{email}</strong>
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                      Didn't receive the email? Check your spam folder or try again.
-                    </p>
-                  </div>
-                )}
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleBackToLogin}
-                  className="w-full flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+              <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-2xl">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  className="text-center mb-8"
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to Sign In
-                </motion.button>
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="w-20 h-20 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
+                  >
+                    <Shield className="w-10 h-10 text-white" />
+                  </motion.div>
+                  
+                  <h1 className="text-4xl font-bold text-white mb-4">
+                    Welcome Back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">Champion</span>!
+                  </h1>
+                  <p className="text-xl text-blue-200">
+                    Ready to dominate the arena again? Let's get you back in the game!
+                  </p>
+                </motion.div>
+
+                                 <LoginForm 
+                   onSwitchToRegister={() => window.location.href = '/register'}
+                   onForgotPassword={() => window.location.href = '/login?mode=forgot-password'}
+                 />
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
 
-        {/* Footer */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-center mt-8"
-        >
-          <p className="text-blue-100 text-sm">
-            By continuing, you agree to our{' '}
-            <a href="#" className="underline hover:text-white transition-colors">
-              Terms of Service
-            </a>{' '}
-            and{' '}
-            <a href="#" className="underline hover:text-white transition-colors">
-              Privacy Policy
-            </a>
-          </p>
-        </motion.div>
+            {/* Right Side - Features & Benefits */}
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="order-1 lg:order-2"
+            >
+              <div className="space-y-8">
+                {/* Hero Section */}
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.6 }}
+                  className="text-center lg:text-left"
+                >
+                  <h2 className="text-5xl lg:text-6xl font-black text-white mb-6 leading-tight">
+                    <span className="block">Ready to</span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">
+                      Dominate Again?
+                    </span>
+                  </h2>
+                  <p className="text-xl text-blue-200 mb-8 leading-relaxed">
+                    Your debate skills are waiting to be unleashed. Jump back into the arena and continue your journey to becoming a debate master.
+                  </p>
+                </motion.div>
+
+                {/* Features Grid */}
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.8 }}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                >
+                  {[
+                    {
+                      icon: Zap,
+                      title: "Lightning-Fast Matchmaking",
+                      description: "Find opponents in under 10 seconds",
+                      gradient: "from-yellow-400 to-orange-500"
+                    },
+                    {
+                      icon: Brain,
+                      title: "AI-Powered Feedback",
+                      description: "Get instant analysis of your arguments",
+                      gradient: "from-purple-400 to-pink-500"
+                    },
+                    {
+                      icon: Trophy,
+                      title: "ELO Rating System",
+                      description: "Track your progress and climb ranks",
+                      gradient: "from-green-400 to-teal-500"
+                    },
+                    {
+                      icon: Shield,
+                      title: "Fair & Balanced",
+                      description: "Unbiased judging and fair competition",
+                      gradient: "from-blue-400 to-indigo-500"
+                    }
+                  ].map((feature, index) => {
+                    const Icon = feature.icon;
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 1 + index * 0.1 }}
+                        whileHover={{ y: -5, scale: 1.02 }}
+                        className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300"
+                      >
+                        <div className={`w-12 h-12 bg-gradient-to-r ${feature.gradient} rounded-xl flex items-center justify-center mb-4 shadow-lg`}>
+                          <Icon className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
+                        <p className="text-blue-200 text-sm">{feature.description}</p>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+
+                {/* Stats */}
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 1.4 }}
+                  className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-xl"
+                >
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-2xl font-bold text-white mb-1">50K+</div>
+                      <div className="text-blue-200 text-sm">Active Debaters</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white mb-1">100K+</div>
+                      <div className="text-blue-200 text-sm">Debates Completed</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white mb-1">95%</div>
+                      <div className="text-blue-200 text-sm">Satisfaction Rate</div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </div>
+
+      {/* Bottom CTA */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 1.6 }}
+        className="relative z-10 container mx-auto px-6 py-12"
+      >
+        <div className="text-center">
+          <motion.div
+            animate={{ scale: [1, 1.02, 1] }}
+            transition={{ duration: 3, repeat: Infinity }}
+            className="bg-gradient-to-r from-yellow-400/20 to-orange-500/20 backdrop-blur-sm rounded-3xl p-8 border border-white/20 shadow-2xl max-w-2xl mx-auto"
+          >
+            <h3 className="text-2xl font-bold text-white mb-4">
+              New to Debattle?
+            </h3>
+            <p className="text-blue-200 mb-6">
+              Join thousands of debaters and start your journey to becoming a debate champion today!
+            </p>
+            <Link
+              to="/register"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-8 py-4 rounded-xl font-bold hover:from-yellow-500 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              <Sparkles className="w-5 h-5" />
+              Create Your Account
+            </Link>
+          </motion.div>
+        </div>
+      </motion.div>
     </div>
   );
 };

@@ -1,180 +1,305 @@
-import React, { useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useAuth } from '../components/auth/AuthProvider';
-import { useNavigate, Link } from 'react-router-dom';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { FcGoogle } from 'react-icons/fc';
-
-interface RegisterFormInputs {
-  displayName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  photo: FileList;
-}
+import { Link } from 'react-router-dom';
+import { Sparkles, Shield, Zap, Brain, Trophy, Users, Star, Crown } from 'lucide-react';
+import RegisterForm from '../components/auth/RegisterForm';
 
 const RegisterPage: React.FC = () => {
-  const { signUp, signInWithGoogle } = useAuth();
-  const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
-  const [avatar, setAvatar] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterFormInputs>();
-
-  const onSubmit = async (data: RegisterFormInputs) => {
-    setError(null);
-    if (data.password !== data.confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    let photoURL = '';
-    if (data.photo && data.photo.length > 0) {
-      const file = data.photo[0];
-      photoURL = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.readAsDataURL(file);
-      });
-    }
-    try {
-      await signUp({
-        displayName: data.displayName,
-        email: data.email,
-        password: data.password,
-        username: data.displayName.toLowerCase().replace(/\s+/g, '_'),
-        photoURL,
-      });
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Registration failed.');
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setError(null);
-    try {
-      await signInWithGoogle();
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed.');
-    }
-  };
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (ev) => setAvatar(ev.target?.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-primary via-accent to-primary">
-      <motion.form
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7 }}
-        onSubmit={handleSubmit(onSubmit)}
-        className="bg-white dark:bg-dark rounded-xl shadow-xl p-8 w-full max-w-md flex flex-col gap-6"
-        aria-label="Register form"
-      >
-        <h2 className="text-3xl font-bold text-center mb-2">Sign Up</h2>
-        {error && <div className="text-red-600 bg-red-100 dark:bg-red-900 rounded p-2 text-center">{error}</div>}
-        <div className="flex flex-col items-center gap-2">
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            {...register('photo')}
-            ref={fileInputRef}
-            onChange={handleAvatarChange}
-          />
-          <div
-            className="w-20 h-20 rounded-full bg-secondary-light dark:bg-secondary flex items-center justify-center cursor-pointer overflow-hidden border-2 border-accent mb-2"
-            onClick={() => fileInputRef.current?.click()}
-            tabIndex={0}
-            aria-label="Upload avatar"
-            role="button"
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+        
+        {/* Floating Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div
+            animate={{ y: [0, -25, 0], rotate: [0, 8, 0] }}
+            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-20 left-10 text-5xl opacity-10"
           >
-            {avatar ? (
-              <img src={avatar} alt="Avatar preview" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-secondary">Upload</span>
-            )}
+            ⚔️
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, 35, 0], rotate: [0, -12, 0] }}
+            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-40 right-20 text-6xl opacity-10"
+          >
+            🏆
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, -20, 0], x: [0, 15, 0] }}
+            transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-40 left-20 text-4xl opacity-10"
+          >
+            🧠
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, 30, 0], x: [0, -20, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-20 right-10 text-5xl opacity-10"
+          >
+            ⚡
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="relative z-10 container mx-auto px-6 py-6">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center justify-between"
+        >
+          <Link
+            to="/"
+            className="flex items-center space-x-3 group"
+          >
+            <motion.div
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg"
+            >
+              <span className="text-white font-bold text-lg">⚔️</span>
+            </motion.div>
+            <div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+                Debattle
+              </span>
+              <div className="text-xs text-blue-300 font-medium">The Arena of Ideas</div>
+            </div>
+          </Link>
+          
+          <Link
+            to="/login"
+            className="text-white/90 hover:text-white transition-colors font-medium flex items-center gap-2"
+          >
+            <span>Already have an account?</span>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-lg font-bold hover:from-yellow-500 hover:to-orange-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              Sign In
+            </motion.div>
+          </Link>
+        </motion.div>
+      </nav>
+
+      {/* Main Content */}
+      <div className="relative z-10 container mx-auto px-6 py-12">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            
+            {/* Left Side - Register Form */}
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              className="order-2 lg:order-1"
+            >
+              <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-2xl">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  className="text-center mb-8"
+                >
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="w-20 h-20 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
+                  >
+                    <Crown className="w-10 h-10 text-white" />
+                  </motion.div>
+                  
+                  <h1 className="text-4xl font-bold text-white mb-4">
+                    Join the <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">Elite</span>!
+                  </h1>
+                  <p className="text-xl text-blue-200">
+                    Your journey to becoming a debate champion starts here. Ready to dominate the arena?
+                  </p>
+                </motion.div>
+
+                <RegisterForm onSwitchToLogin={() => window.location.href = '/login'} />
+              </div>
+            </motion.div>
+
+            {/* Right Side - Benefits & Features */}
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="order-1 lg:order-2"
+            >
+              <div className="space-y-8">
+                {/* Hero Section */}
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.6 }}
+                  className="text-center lg:text-left"
+                >
+                  <h2 className="text-5xl lg:text-6xl font-black text-white mb-6 leading-tight">
+                    <span className="block">Become a</span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">
+                      Debate Master
+                    </span>
+                  </h2>
+                  <p className="text-xl text-blue-200 mb-8 leading-relaxed">
+                    Join thousands of debaters worldwide and start your journey to becoming a champion. Your first victory awaits!
+                  </p>
+                </motion.div>
+
+                {/* Benefits Grid */}
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.8 }}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                >
+                  {[
+                    {
+                      icon: Zap,
+                      title: "Lightning-Fast Setup",
+                      description: "Get started in under 30 seconds",
+                      gradient: "from-yellow-400 to-orange-500"
+                    },
+                    {
+                      icon: Brain,
+                      title: "AI-Powered Learning",
+                      description: "Get instant feedback on your arguments",
+                      gradient: "from-purple-400 to-pink-500"
+                    },
+                    {
+                      icon: Trophy,
+                      title: "Competitive Rankings",
+                      description: "Climb from Bronze to Diamond",
+                      gradient: "from-green-400 to-teal-500"
+                    },
+                    {
+                      icon: Users,
+                      title: "Global Community",
+                      description: "Debate with champions worldwide",
+                      gradient: "from-blue-400 to-indigo-500"
+                    }
+                  ].map((benefit, index) => {
+                    const Icon = benefit.icon;
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 1 + index * 0.1 }}
+                        whileHover={{ y: -5, scale: 1.02 }}
+                        className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300"
+                      >
+                        <div className={`w-12 h-12 bg-gradient-to-r ${benefit.gradient} rounded-xl flex items-center justify-center mb-4 shadow-lg`}>
+                          <Icon className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">{benefit.title}</h3>
+                        <p className="text-blue-200 text-sm">{benefit.description}</p>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+
+                {/* Testimonials */}
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 1.4 }}
+                  className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-xl"
+                >
+                  <h3 className="text-xl font-bold text-white mb-4 text-center">What Champions Say</h3>
+                  <div className="space-y-4">
+                    {[
+                      {
+                        quote: "Debattle transformed my argument skills. I went from Bronze to Diamond in just 3 months!",
+                        author: "Sarah M.",
+                        rating: 5
+                      },
+                      {
+                        quote: "The AI feedback is incredible. I've improved my logic score by 40% since joining.",
+                        author: "Alex K.",
+                        rating: 5
+                      }
+                    ].map((testimonial, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.8, delay: 1.6 + index * 0.1 }}
+                        className="bg-white/5 rounded-xl p-4"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          {[...Array(testimonial.rating)].map((_, i) => (
+                            <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                          ))}
+                        </div>
+                        <p className="text-blue-200 text-sm italic mb-2">"{testimonial.quote}"</p>
+                        <p className="text-white font-semibold text-sm">- {testimonial.author}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                {/* Stats */}
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 1.8 }}
+                  className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-xl"
+                >
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-2xl font-bold text-white mb-1">50K+</div>
+                      <div className="text-blue-200 text-sm">Active Debaters</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white mb-1">100K+</div>
+                      <div className="text-blue-200 text-sm">Debates Completed</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white mb-1">95%</div>
+                      <div className="text-blue-200 text-sm">Satisfaction Rate</div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
           </div>
         </div>
-        <div>
-          <label htmlFor="displayName" className="block font-semibold mb-1">Display Name</label>
-          <input
-            id="displayName"
-            type="text"
-            {...register('displayName', { required: 'Display name is required' })}
-            className="w-full px-4 py-2 rounded border border-secondary focus:ring-2 focus:ring-accent"
-            aria-invalid={!!errors.displayName}
-            aria-describedby="displayName-error"
-          />
-          {errors.displayName && <span id="displayName-error" className="text-red-500 text-xs">{errors.displayName.message}</span>}
+      </div>
+
+      {/* Bottom CTA */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 2 }}
+        className="relative z-10 container mx-auto px-6 py-12"
+      >
+        <div className="text-center">
+          <motion.div
+            animate={{ scale: [1, 1.02, 1] }}
+            transition={{ duration: 3, repeat: Infinity }}
+            className="bg-gradient-to-r from-yellow-400/20 to-orange-500/20 backdrop-blur-sm rounded-3xl p-8 border border-white/20 shadow-2xl max-w-2xl mx-auto"
+          >
+            <h3 className="text-2xl font-bold text-white mb-4">
+              Ready to Start Your Journey?
+            </h3>
+            <p className="text-blue-200 mb-6">
+              Join thousands of debaters and start improving your skills today. Your first victory awaits!
+            </p>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-8 py-4 rounded-xl font-bold hover:from-yellow-500 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+            >
+              <Sparkles className="w-5 h-5" />
+              Create Your Account
+            </motion.div>
+          </motion.div>
         </div>
-        <div>
-          <label htmlFor="email" className="block font-semibold mb-1">Email</label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            {...register('email', { required: 'Email is required' })}
-            className="w-full px-4 py-2 rounded border border-secondary focus:ring-2 focus:ring-accent"
-            aria-invalid={!!errors.email}
-            aria-describedby="email-error"
-          />
-          {errors.email && <span id="email-error" className="text-red-500 text-xs">{errors.email.message}</span>}
-        </div>
-        <div>
-          <label htmlFor="password" className="block font-semibold mb-1">Password</label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'Password must be at least 6 characters' } })}
-            className="w-full px-4 py-2 rounded border border-secondary focus:ring-2 focus:ring-accent"
-            aria-invalid={!!errors.password}
-            aria-describedby="password-error"
-          />
-          {errors.password && <span id="password-error" className="text-red-500 text-xs">{errors.password.message}</span>}
-        </div>
-        <div>
-          <label htmlFor="confirmPassword" className="block font-semibold mb-1">Confirm Password</label>
-          <input
-            id="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            {...register('confirmPassword', { required: 'Please confirm your password' })}
-            className="w-full px-4 py-2 rounded border border-secondary focus:ring-2 focus:ring-accent"
-            aria-invalid={!!errors.confirmPassword}
-            aria-describedby="confirmPassword-error"
-          />
-          {errors.confirmPassword && <span id="confirmPassword-error" className="text-red-500 text-xs">{errors.confirmPassword.message}</span>}
-        </div>
-        <button
-          type="submit"
-          className="w-full py-3 rounded bg-button-gradient text-white font-bold text-lg shadow hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-accent"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Signing up...' : 'Sign Up'}
-        </button>
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          className="w-full py-3 rounded flex items-center justify-center gap-2 border border-secondary bg-white dark:bg-dark text-foreground font-bold text-lg shadow hover:scale-105 transition-transform mt-2 focus:outline-none focus:ring-2 focus:ring-accent"
-          aria-label="Sign up with Google"
-        >
-          <FcGoogle size={22} /> Sign up with Google
-        </button>
-        <div className="flex justify-between text-sm mt-2">
-          <Link to="/login" className="text-accent hover:underline">Already have an account?</Link>
-        </div>
-      </motion.form>
-    </main>
+      </motion.div>
+    </div>
   );
 };
 

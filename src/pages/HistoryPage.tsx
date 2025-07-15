@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, Trophy, TrendingUp, TrendingDown, Minus, Search, Filter } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
-import Layout from '../components/layout/Layout';
 import { useDebateStore } from '../stores/debateStore';
 import { useEffect } from 'react';
 
@@ -146,17 +145,16 @@ const HistoryPage: React.FC = () => {
   // Replace all mockHistory references with debates
   // Show loading state
   if (isLoading) {
-    return <Layout><div className="p-8 text-center">Loading debate history...</div></Layout>;
+    return <div className="p-8 text-center">Loading debate history...</div>;
   }
 
   // Show empty state
   if (!debates.length) {
-    return <Layout><div className="p-8 text-center">No debates found. Try participating in a debate!</div></Layout>;
+    return <div className="p-8 text-center">No debates found. Try participating in a debate!</div>;
   }
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-6 py-8">
         {/* Header */}
         <motion.div
@@ -395,8 +393,7 @@ const HistoryPage: React.FC = () => {
           </motion.div>
         )}
       </div>
-      </div>
-    </Layout>
+    </div>
   );
 };
 

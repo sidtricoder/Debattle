@@ -4,16 +4,11 @@ import clsx from 'clsx';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'accent' | 'success' | 'outline' | 'ghost';
 
-interface ButtonProps {
+interface ButtonProps extends React.ComponentPropsWithoutRef<typeof motion.button> {
   variant?: ButtonVariant;
   loading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
-  children: React.ReactNode;
-  className?: string;
-  disabled?: boolean;
-  onClick?: () => void;
-  type?: 'button' | 'submit' | 'reset';
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -33,7 +28,6 @@ const Button: React.FC<ButtonProps> = ({
   children,
   className,
   disabled,
-  onClick,
   type = 'button',
   ...props
 }) => (
@@ -47,7 +41,6 @@ const Button: React.FC<ButtonProps> = ({
       className
     )}
     disabled={disabled || loading}
-    onClick={onClick}
     type={type}
     aria-busy={loading}
     {...props}
