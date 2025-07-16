@@ -18,7 +18,7 @@ interface AuthStore extends AuthState {
 
 // Helper function to convert Firestore data to User type
 const toUser = (data: any): User => ({
-  uid: data.uid,
+  uid: data.uid || '',
   email: data.email || '',
   displayName: data.displayName || 'Anonymous User',
   username: data.username || 'anonymous',
@@ -32,34 +32,34 @@ const toUser = (data: any): User => ({
   winStreak: data.winStreak || 0,
   bestWinStreak: data.bestWinStreak || 0,
   win_rate: data.win_rate || 0,
-  achievements: data.achievements || [],
+  achievements: Array.isArray(data.achievements) ? data.achievements : [],
   xp: data.xp || 0,
   level: data.level || 1,
   tier: data.tier || 'bronze',
   created_at: data.created_at?.toDate ? data.created_at.toDate() : data.created_at || new Date(),
   last_active: data.last_active?.toDate ? data.last_active.toDate() : data.last_active || new Date(),
-  preferred_topics: data.preferred_topics || ['technology', 'politics'],
+  preferred_topics: Array.isArray(data.preferred_topics) ? data.preferred_topics : ['technology', 'politics'],
   debate_style: data.debate_style || 'analytical',
   bio: data.bio || 'New debater on the platform!',
-  preferences: data.preferences || {
-    theme: 'auto',
+  preferences: {
+    theme: data.preferences?.theme || 'light',
     notifications: {
-      email: true,
-      push: true,
-      debate_invites: true,
-      achievements: true
+      email: data.preferences?.notifications?.email !== undefined ? data.preferences.notifications.email : true,
+      push: data.preferences?.notifications?.push !== undefined ? data.preferences.notifications.push : true,
+      debate_invites: data.preferences?.notifications?.debate_invites !== undefined ? data.preferences.notifications.debate_invites : true,
+      achievements: data.preferences?.notifications?.achievements !== undefined ? data.preferences.notifications.achievements : true
     },
     privacy: {
-      profile_visible: true,
-      show_rating: true,
-      show_stats: true
+      profile_visible: data.preferences?.privacy?.profile_visible !== undefined ? data.preferences.privacy.profile_visible : true,
+      show_rating: data.preferences?.privacy?.show_rating !== undefined ? data.preferences.privacy.show_rating : true,
+      show_stats: data.preferences?.privacy?.show_stats !== undefined ? data.preferences.privacy.show_stats : true
     }
   },
-  stats: data.stats || {
-    totalArgumentsPosted: 0,
-    averageResponseTime: 0,
-    favoriteTopics: [],
-    strongestCategories: []
+  stats: {
+    totalArgumentsPosted: data.stats?.totalArgumentsPosted || 0,
+    averageResponseTime: data.stats?.averageResponseTime || 0,
+    favoriteTopics: Array.isArray(data.stats?.favoriteTopics) ? data.stats.favoriteTopics : [],
+    strongestCategories: Array.isArray(data.stats?.strongestCategories) ? data.stats.strongestCategories : []
   }
 });
 

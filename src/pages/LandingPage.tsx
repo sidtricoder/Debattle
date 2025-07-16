@@ -83,7 +83,7 @@ const LandingPage: React.FC = () => {
       description: "Find your perfect debate opponent in under 10 seconds",
       details: "Our advanced algorithm analyzes your skill level, debate preferences, and topic interests to connect you with the perfect opponent instantly.",
       gradient: "from-yellow-400 to-orange-500",
-      bgGradient: "from-yellow-400/20 to-orange-500/20"
+      bgGradient: "from-yellow-500 to-orange-600"
     },
     {
       icon: Brain,
@@ -91,7 +91,7 @@ const LandingPage: React.FC = () => {
       description: "Get instant, unbiased feedback on your arguments",
       details: "Our AI evaluates your arguments for clarity, logic, and persuasiveness, providing detailed feedback to help you improve your debate skills.",
       gradient: "from-purple-400 to-pink-500",
-      bgGradient: "from-purple-400/20 to-pink-500/20"
+      bgGradient: "from-purple-600 to-pink-600"
     },
     {
       icon: Trophy,
@@ -99,7 +99,7 @@ const LandingPage: React.FC = () => {
       description: "Climb from Bronze to Diamond like a chess grandmaster",
       details: "Track your progress with our competitive ranking system. Win debates to climb the leaderboard and earn prestigious ranks and achievements.",
       gradient: "from-green-400 to-teal-500",
-      bgGradient: "from-green-400/20 to-teal-500/20"
+      bgGradient: "from-green-600 to-teal-600"
     },
     {
       icon: Globe,
@@ -107,7 +107,7 @@ const LandingPage: React.FC = () => {
       description: "Debate with brilliant minds from 50+ countries",
       details: "Join a diverse community of thinkers and speakers from around the world. Learn different perspectives and debate styles from various cultures.",
       gradient: "from-blue-400 to-indigo-500",
-      bgGradient: "from-blue-400/20 to-indigo-500/20"
+      bgGradient: "from-blue-600 to-indigo-600"
     }
   ];
 
@@ -289,14 +289,13 @@ const LandingPage: React.FC = () => {
                   </div>
                   
                   {/* Back of the card */}
-                  <div className={`flip-card-back bg-gradient-to-br ${feature.bgGradient} rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-full`}>
+                  <div className={`flip-card-back bg-gradient-to-br ${feature.bgGradient} dark:opacity-90 rounded-2xl p-8 shadow-xl shadow-black/10 dark:shadow-black/20 border border-white/10 flex flex-col items-center justify-center h-full`}>
                     <h3 className="text-xl font-bold text-white mb-4 text-center">
                       {feature.title}
                     </h3>
                     <p className="text-white/90 leading-relaxed text-center">
                       {feature.details}
                     </p>
-
                   </div>
                 </div>
               </motion.div>

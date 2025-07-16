@@ -29,20 +29,18 @@ const Header: React.FC = () => {
   const isLandingPage = location.pathname === '/';
 
   // Navigation items - different for landing vs authenticated pages
-  const navigation = [
-    { name: 'Features', href: '#features', icon: Sparkles },
-    { name: 'About', href: '#about', icon: Home },
-  ];
-
-  if (isAuthenticated) {
-    navigation.push(
-      { name: 'Dashboard', href: '/dashboard', icon: TrendingUp },
-      { name: 'Find Debate', href: '/find-debate', icon: Trophy },
-      { name: 'Practice', href: '/practice', icon: User },
-      { name: 'History', href: '/history', icon: TrendingUp },
-      { name: 'Leaderboard', href: '/leaderboard', icon: Trophy }
-    );
-  }
+  const navigation = isAuthenticated 
+    ? [
+        { name: 'Dashboard', href: '/dashboard', icon: TrendingUp },
+        { name: 'Find Debate', href: '/find-debate', icon: Trophy },
+        { name: 'Practice', href: '/practice', icon: User },
+        { name: 'History', href: '/history', icon: TrendingUp },
+        { name: 'Leaderboard', href: '/leaderboard', icon: Trophy }
+      ]
+    : [
+        { name: 'Features', href: '#features', icon: Sparkles },
+        { name: 'About', href: '#about', icon: Home },
+      ];
 
   // Handle click outside to close user menu
   useEffect(() => {
