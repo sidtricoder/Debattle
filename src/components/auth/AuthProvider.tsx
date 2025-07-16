@@ -15,10 +15,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     error,
     isAuthenticated,
     signInWithGoogle,
-    signInWithEmail,
-    signUp,
     signOut,
-    resetPassword,
     updateProfile,
     clearError,
     initializeAuth,
@@ -35,10 +32,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     error,
     isAuthenticated,
     signInWithGoogle,
-    signInWithEmail,
-    signUp,
+    signInWithEmail: async () => {
+      throw new Error('Email/password authentication is not supported. Please use Google Sign-In.');
+    },
+    signUp: async () => {
+      throw new Error('Email/password registration is not supported. Please use Google Sign-In.');
+    },
     signOut,
-    resetPassword,
+    resetPassword: async () => {
+      throw new Error('Password reset is not supported. Please use Google Sign-In.');
+    },
     updateProfile,
     clearError,
   };

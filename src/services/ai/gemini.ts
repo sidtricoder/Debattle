@@ -132,8 +132,8 @@ Please provide a comprehensive judgment in the following JSON format:
 {
   "winner": "<userId of winner>",
   "scores": {
-    "<userId1>": <overall_score_1-10>,
-    "<userId2>": <overall_score_1-10>
+    "<userId1>": <overall_score_1-10, float, one decimal>,
+    "<userId2>": <overall_score_1-10, float, one decimal>
   },
   "feedback": {
     "<userId1>": ["<strength1>", "<weakness1>", "<improvement1>"],
@@ -145,6 +145,13 @@ Please provide a comprehensive judgment in the following JSON format:
   "overallQuality": <1-10>,
   "learningPoints": ["<learning_point1>", "<learning_point2>"]
 }
+
+IMPORTANT:
+- Always provide a clear winner (the userId of the winning participant).
+- Always provide a score for each participant as a float with one decimal place (e.g., 8.7).
+- Do not omit any fields from the JSON.
+- If you cannot determine a winner, choose the participant with the most persuasive arguments and evidence.
+- The JSON must be valid and parseable.
 
 Evaluation criteria:
 1. Argument strength and logical coherence

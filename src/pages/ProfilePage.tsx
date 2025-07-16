@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Edit, Save, Camera, Trophy, TrendingUp, Target, Award, Settings, User, Shield } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
-import Layout from '../components/layout/Layout';
-import { fetchUserFromFirestore, useAuthStore } from '../stores/authStore';
 import SettingsForm from '../components/profile/SettingsForm';
 
 interface Achievement {
@@ -81,12 +79,7 @@ const ProfilePage: React.FC = () => {
     preferred_topics: user?.preferred_topics || []
   });
 
-  // Always fetch the latest user data from Firestore on mount and when user changes
-  useEffect(() => {
-    if (user?.uid) {
-      fetchUserFromFirestore(user.uid, useAuthStore.setState);
-    }
-  }, [user?.uid]);
+  // User data is managed by the auth store
 
   const handleSave = async () => {
     try {
@@ -123,8 +116,7 @@ const ProfilePage: React.FC = () => {
   const winRate = user ? Math.round((user.wins / Math.max(user.gamesPlayed, 1)) * 100) : 0;
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-6 py-8">
         {/* Profile Header */}
         <motion.div
@@ -400,8 +392,7 @@ const ProfilePage: React.FC = () => {
           )}
         </motion.div>
       </div>
-      </div>
-    </Layout>
+    </div>
   );
 };
 

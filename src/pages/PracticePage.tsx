@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Brain, Target, Clock, Star, Play, Pause, RotateCcw, MessageSquare, TrendingUp } from 'lucide-react';
-import { useAuthStore, fetchUserFromFirestore } from '../stores/authStore';
+import { Brain, Target, Clock, Star, Play, Pause, RotateCcw, MessageSquare, TrendingUp, Zap, Award, Users, Sparkles } from 'lucide-react';
+import { useAuthStore } from '../stores/authStore';
 import { useDebateStore } from '../stores/debateStore';
-import Layout from '../components/layout/Layout';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
 
@@ -102,12 +101,7 @@ const PracticePage: React.FC = () => {
   const [showTips, setShowTips] = useState(false);
   const [isCreatingPractice, setIsCreatingPractice] = useState(false);
 
-  useEffect(() => {
-    if (user?.uid) {
-      fetchUserFromFirestore(user.uid, useAuthStore.setState);
-    }
-  }, [user?.uid]);
-
+  // User data is managed by the auth store
   const filteredTopics = practiceTopics.filter(topic => topic.difficulty === selectedDifficulty);
 
   const startPractice = async (topic: PracticeTopic) => {
@@ -217,239 +211,369 @@ const PracticePage: React.FC = () => {
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'beginner': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'intermediate': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'advanced': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      case 'beginner': return 'bg-gradient-to-r from-green-400 to-emerald-500 text-white';
+      case 'intermediate': return 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white';
+      case 'advanced': return 'bg-gradient-to-r from-red-400 to-pink-500 text-white';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
   };
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
-        <div className="container mx-auto px-6 py-8">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
-          >
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Practice Mode
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Hone your debating skills with our AI opponents. Practice different topics, 
-              difficulty levels, and improve your argumentation techniques.
-            </p>
-          </motion.div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-pink-900/20 relative overflow-hidden">
+      {/* Floating Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{ 
+            y: [0, -20, 0],
+            rotate: [0, 5, 0]
+          }}
+          transition={{ 
+            duration: 6,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute top-20 left-10 text-4xl opacity-10"
+        >
+          🧠
+        </motion.div>
+        <motion.div
+          animate={{ 
+            y: [0, 20, 0],
+            rotate: [0, -5, 0]
+          }}
+          transition={{ 
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute top-40 right-20 text-3xl opacity-10"
+        >
+          ⚡
+        </motion.div>
+        <motion.div
+          animate={{ 
+            y: [0, -15, 0],
+            x: [0, 10, 0]
+          }}
+          transition={{ 
+            duration: 7,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute bottom-40 left-20 text-2xl opacity-10"
+        >
+          🎯
+        </motion.div>
+        <motion.div
+          animate={{ 
+            y: [0, 25, 0],
+            x: [0, -15, 0]
+          }}
+          transition={{ 
+            duration: 9,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute bottom-20 right-10 text-3xl opacity-10"
+        >
+          🏆
+        </motion.div>
+        {/* Additional faded icons for more dynamic background */}
+        <motion.div
+          animate={{ y: [0, 30, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-1/2 left-1/4 text-7xl opacity-5"
+        >
+          <Star className="w-16 h-16 text-yellow-400" />
+        </motion.div>
+        <motion.div
+          animate={{ y: [0, -25, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-1/3 right-1/3 text-6xl opacity-5"
+        >
+          <Zap className="w-14 h-14 text-blue-400" />
+        </motion.div>
+        <motion.div
+          animate={{ x: [0, 20, 0] }}
+          transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-1/4 right-1/2 text-5xl opacity-5"
+        >
+          <Award className="w-12 h-12 text-pink-400" />
+        </motion.div>
+        <motion.div
+          animate={{ x: [0, -20, 0] }}
+          transition={{ duration: 13, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-10 left-1/2 text-6xl opacity-5"
+        >
+          <Users className="w-14 h-14 text-green-400" />
+        </motion.div>
+      </div>
 
-          {/* Practice Stats */}
+      <div className="container mx-auto px-6 py-8 relative z-10">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="grid md:grid-cols-4 gap-6 mb-8"
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="inline-block mb-6"
           >
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-lg">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Brain className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">24</div>
-              <div className="text-gray-600 dark:text-gray-300">Practice Sessions</div>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-lg">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">6.5h</div>
-              <div className="text-gray-600 dark:text-gray-300">Total Practice Time</div>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-lg">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Star className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">8.2</div>
-              <div className="text-gray-600 dark:text-gray-300">Avg. Score</div>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-lg">
-              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">+45</div>
-              <div className="text-gray-600 dark:text-gray-300">Rating Gain</div>
+            <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto shadow-2xl">
+              <Brain className="w-10 h-10 text-white" />
             </div>
           </motion.div>
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+            Practice Arena
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
+            🚀 Master the art of debate with our intelligent AI opponents. 
+            Choose your challenge level and sharpen your argumentation skills!
+          </p>
+        </motion.div>
 
-          {/* Difficulty Filter */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8"
-          >
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Select Difficulty</h2>
-            <div className="flex gap-4">
-              {(['beginner', 'intermediate', 'advanced'] as const).map((difficulty) => (
-                <button
-                  key={difficulty}
-                  onClick={() => setSelectedDifficulty(difficulty)}
-                  className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    selectedDifficulty === difficulty
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-                </button>
-              ))}
+        {/* Fancy separator */}
+        <div className="flex justify-center mb-12">
+          <hr className="w-2/3 h-1 rounded-full border-0 bg-gradient-to-r from-purple-300 via-pink-300 to-yellow-200 opacity-60" />
+        </div>
+
+        {/* Practice Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-stretch justify-center mb-12 gap-0"
+        >
+          <div className="p-6 text-center flex-1 flex flex-col justify-center">
+            <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Brain className="w-7 h-7 text-white" />
             </div>
-          </motion.div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">24</div>
+            <div className="text-gray-600 dark:text-gray-300 font-medium">Practice Sessions</div>
+          </div>
+          <div className="hidden md:flex w-px mx-0 my-6 bg-gradient-to-b from-purple-200 via-pink-200 to-yellow-100 opacity-60" />
+          <div className="p-6 text-center flex-1 flex flex-col justify-center">
+            <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Clock className="w-7 h-7 text-white" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">6.5h</div>
+            <div className="text-gray-600 dark:text-gray-300 font-medium">Total Practice Time</div>
+          </div>
+          <div className="hidden md:flex w-px mx-0 my-6 bg-gradient-to-b from-blue-200 via-purple-200 to-pink-100 opacity-50" />
+          <div className="p-6 text-center flex-1 flex flex-col justify-center">
+            <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Star className="w-7 h-7 text-white" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">8.2</div>
+            <div className="text-gray-600 dark:text-gray-300 font-medium">Avg. Score</div>
+          </div>
+          <div className="hidden md:flex w-px mx-0 my-6 bg-gradient-to-b from-orange-200 via-red-200 to-pink-100 opacity-40" />
+          <div className="p-6 text-center flex-1 flex flex-col justify-center">
+            <div className="w-14 h-14 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <TrendingUp className="w-7 h-7 text-white" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">+45</div>
+            <div className="text-gray-600 dark:text-gray-300 font-medium">Rating Gain</div>
+          </div>
+        </motion.div>
 
-          {/* Practice Topics */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {filteredTopics.map((topic, index) => (
-              <motion.div
-                key={topic.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-200"
+        {/* Fancy separator */}
+        <div className="flex justify-center mb-12">
+          <hr className="w-1/2 h-0.5 rounded-full border-0 bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 opacity-50" />
+        </div>
+
+        {/* Difficulty Filter */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="p-8 mb-12"
+        >
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+            🎯 Choose Your Challenge Level
+          </h2>
+          <div className="flex gap-4 justify-center">
+            {(['beginner', 'intermediate', 'advanced'] as const).map((difficulty) => (
+              <button
+                key={difficulty}
+                onClick={() => setSelectedDifficulty(difficulty)}
+                className={`px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-none border-none focus:outline-none focus:ring-2 focus:ring-purple-400/50 ${
+                  selectedDifficulty === difficulty
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white scale-105'
+                    : 'bg-white/40 dark:bg-gray-700/40 text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-700/60'
+                }`}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(topic.difficulty)}`}>
+                {difficulty === 'beginner' && '🌱'}
+                {difficulty === 'intermediate' && '⚡'}
+                {difficulty === 'advanced' && '🔥'}
+                {' '}
+                {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Fancy separator */}
+        <div className="flex justify-center mb-12">
+          <hr className="w-1/2 h-0.5 rounded-full border-0 bg-gradient-to-r from-green-200 via-blue-200 to-purple-200 opacity-40" />
+        </div>
+
+        {/* Practice Topics */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="flex flex-col lg:flex-row items-stretch justify-center mb-12 gap-0"
+        >
+          {filteredTopics.map((topic, index) => (
+            <React.Fragment key={topic.id}>
+              <div className="p-8 transition-all duration-300 flex-1 flex flex-col justify-center">
+                <div className="flex items-start justify-between mb-6">
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold shadow-none ${getDifficultyColor(topic.difficulty)}`}> 
+                    {topic.difficulty === 'beginner' && '🌱'}
+                    {topic.difficulty === 'intermediate' && '⚡'}
+                    {topic.difficulty === 'advanced' && '🔥'}
+                    {' '}
                     {topic.difficulty}
                   </span>
-                  <div className="flex items-center gap-1 text-gray-500">
+                  <div className="flex items-center gap-2 text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
                     <Clock className="w-4 h-4" />
-                    <span className="text-sm">{topic.estimatedTime}m</span>
+                    <span className="text-sm font-medium">{topic.estimatedTime}m</span>
                   </div>
                 </div>
 
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
                   {topic.title}
                 </h3>
                 
-                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                <p className="text-gray-600 dark:text-gray-300 text-sm mb-6 leading-relaxed">
                   {topic.description}
                 </p>
 
-                <div className="mb-4">
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl">
+                  <div className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
                     AI Personality:
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="text-sm text-blue-800 dark:text-blue-200">
                     {topic.aiPersonality}
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <button
                     onClick={() => startPractice(topic)}
                     disabled={isCreatingPractice}
-                    className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:from-green-700 hover:to-blue-700 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 shadow-none disabled:opacity-50"
                   >
                     {isCreatingPractice && selectedTopic?.id === topic.id ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         Creating Practice...
                       </>
                     ) : (
                       <>
-                        <Play className="w-4 h-4" />
+                        <Play className="w-5 h-5" />
                         Start Practice
                       </>
                     )}
                   </button>
-                  
                   <button
                     onClick={() => setShowTips(!showTips)}
-                    className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+                    className="w-full border-2 border-purple-100 dark:border-purple-700 text-purple-700 dark:text-purple-300 px-6 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-300 text-sm font-medium shadow-none"
                   >
-                    {showTips ? 'Hide' : 'Show'} Tips
+                    {showTips ? '🙈 Hide' : '💡 Show'} Tips
                   </button>
                 </div>
 
                 {showTips && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
+                  <div
+                    className="mt-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl border border-yellow-100 dark:border-yellow-700"
                   >
-                    <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Practice Tips:</h4>
-                    <ul className="space-y-1">
+                    <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-3 flex items-center gap-2">
+                      <Award className="w-4 h-4" />
+                      Practice Tips:
+                    </h4>
+                    <ul className="space-y-2">
                       {topic.tips.map((tip, tipIndex) => (
-                        <li key={tipIndex} className="text-sm text-blue-800 dark:text-blue-200">
-                          • {tip}
+                        <li key={tipIndex} className="text-sm text-yellow-800 dark:text-yellow-200 flex items-start gap-2">
+                          <span className="text-yellow-600 dark:text-yellow-400 mt-1">•</span>
+                          {tip}
                         </li>
                       ))}
                     </ul>
-                  </motion.div>
+                  </div>
                 )}
-              </motion.div>
-            ))}
-          </motion.div>
+              </div>
+              {/* Only show separator between cards, not after the last */}
+              {(index !== filteredTopics.length - 1) && (
+                <div className="hidden lg:flex w-px mx-0 my-8 bg-gradient-to-b from-purple-200 via-pink-200 to-yellow-100 opacity-40" />
+              )}
+            </React.Fragment>
+          ))}
+        </motion.div>
 
-          {/* Practice Features */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mt-12 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8"
-          >
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-              Practice Features
-            </h2>
-            
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Brain className="w-8 h-8 text-green-600 dark:text-green-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  AI Opponents
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Practice against intelligent AI opponents with different personalities and skill levels.
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Instant Feedback
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Get real-time AI feedback on your arguments, logic, and debate techniques.
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <TrendingUp className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Skill Tracking
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Track your progress and see improvements in your debating skills over time.
-                </p>
-              </div>
-            </div>
-          </motion.div>
+        {/* Fancy separator */}
+        <div className="flex justify-center mb-12">
+          <hr className="w-1/2 h-0.5 rounded-full border-0 bg-gradient-to-r from-pink-200 via-yellow-200 to-green-200 opacity-40" />
         </div>
+
+        {/* Practice Features */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="p-12"
+        >
+          <h2 className="text-3xl font-bold text-center mb-12">
+            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              🚀 Why Practice with Debattle?
+            </span>
+          </h2>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+                <Brain className="w-10 h-10 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                🤖 Intelligent AI Opponents
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                Practice against AI opponents with different personalities, skill levels, and debate styles. 
+                Each AI adapts to your skill level for the perfect challenge.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+                <Target className="w-10 h-10 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                ⚡ Instant Feedback & Analysis
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                Get real-time AI feedback on your arguments, logic structure, and debate techniques. 
+                Learn from detailed analysis and improve with every practice session.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+                <TrendingUp className="w-10 h-10 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                📈 Progress Tracking
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                Track your progress with detailed analytics, skill assessments, and performance metrics. 
+                Watch your debating skills improve over time with visual progress indicators.
+              </p>
+            </div>
+          </div>
+        </motion.div>
       </div>
-    </Layout>
+    </div>
   );
 };
 
