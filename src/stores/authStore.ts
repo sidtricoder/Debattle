@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { signInWithGoogle, signOutUser, onAuthStateChange, firestore } from '../lib/firebase';
 import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { User, AuthState, LoginCredentials, RegisterCredentials } from '../types/auth';
-import { getAuth, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 
 interface AuthStore extends AuthState {
   // Actions
@@ -102,6 +102,9 @@ export const useAuthStore = create<AuthStore>()(
           set({ loading: true, error: null });
           const result = await signInWithGoogle();
           const firebaseUser = result.user;
+          if (!firebaseUser) {
+            throw new Error('Google sign-in failed: No user returned');
+          }
           // Check if user exists in Firestore
           const userDocRef = doc(firestore, 'users', firebaseUser.uid);
           const userDocSnap = await getDoc(userDocRef);
@@ -212,61 +215,145 @@ export const useAuthStore = create<AuthStore>()(
         try {
           set({ loading: true, error: null });
           
-          // Mock email authentication for now
-          const mockUser: User = {
-            uid: `email_${Date.now()}`,
-            email: credentials.email,
-            displayName: credentials.email.split('@')[0],
-            username: credentials.email.split('@')[0],
-            photoURL: '',
-            rating: 1200,
-            provisionalRating: true,
-            gamesPlayed: 0,
-            wins: 0,
-            losses: 0,
-            draws: 0,
-            winStreak: 0,
-            bestWinStreak: 0,
-            win_rate: 0,
-            achievements: [],
-            xp: 0,
-            level: 1,
-            tier: 'bronze',
-            created_at: new Date(),
-            last_active: new Date(),
-            preferred_topics: ['technology', 'politics'],
-            debate_style: 'analytical',
-            bio: 'New debater on the platform!',
-            preferences: {
-              theme: 'auto' as 'auto',
-              notifications: {
-                email: true,
-                push: true,
-                debate_invites: true,
-                achievements: true
+          // Sign in with Firebase Auth
+          const auth = getAuth();
+          const userCredential = await signInWithEmailAndPassword(
+            auth,
+            credentials.email,
+            credentials.password
+          );
+          
+          const firebaseUser = userCredential.user;
+          if (!firebaseUser) {
+            throw new Error('Authentication failed');
+          }
+          
+          // Get user data from Firestore
+          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          
+          if (userDocSnap.exists()) {
+            // User exists, update last_active and get user data
+            const userData = userDocSnap.data();
+            const user: User = {
+              ...userData,
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              displayName: firebaseUser.displayName || userData.displayName || firebaseUser.email?.split('@')[0] || 'User',
+              username: userData.username || (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, '_'),
+              photoURL: firebaseUser.photoURL || userData.photoURL || '',
+              last_active: new Date(),
+              // Ensure all required User properties are included
+              rating: userData.rating || 1200,
+              provisionalRating: userData.provisionalRating !== undefined ? userData.provisionalRating : true,
+              gamesPlayed: userData.gamesPlayed || 0,
+              wins: userData.wins || 0,
+              losses: userData.losses || 0,
+              draws: userData.draws || 0,
+              winStreak: userData.winStreak || 0,
+              bestWinStreak: userData.bestWinStreak || 0,
+              win_rate: userData.win_rate || 0,
+              achievements: userData.achievements || [],
+              xp: userData.xp || 0,
+              level: userData.level || 1,
+              tier: userData.tier || 'bronze',
+              created_at: userData.created_at || new Date(),
+              preferred_topics: userData.preferred_topics || ['technology', 'politics'],
+              debate_style: userData.debate_style || 'analytical',
+              bio: userData.bio || 'New debater on the platform!',
+              preferences: userData.preferences || {
+                theme: 'auto',
+                notifications: {
+                  email: true,
+                  push: true,
+                  debate_invites: true,
+                  achievements: true
+                },
+                privacy: {
+                  profile_visible: true,
+                  show_rating: true,
+                  show_stats: true
+                }
               },
-              privacy: {
-                profile_visible: true,
-                show_rating: true,
-                show_stats: true
+              stats: userData.stats || {
+                totalArgumentsPosted: 0,
+                averageResponseTime: 0,
+                favoriteTopics: [],
+                strongestCategories: []
               }
-            },
-            stats: {
-              totalArgumentsPosted: 0,
-              averageResponseTime: 0,
-              favoriteTopics: [],
-              strongestCategories: []
-            }
-          };
-          
-          set({ 
-            user: mockUser, 
-            loading: false, 
-            isAuthenticated: true,
-            error: null 
-          });
-          
-          localStorage.setItem('debattle_user', JSON.stringify(mockUser));
+            };
+            
+            // Update last_active in Firestore
+            await setDoc(userDocRef, { last_active: Timestamp.fromDate(new Date()) }, { merge: true });
+            
+            set({ 
+              user,
+              isAuthenticated: true,
+              loading: false,
+              error: null 
+            });
+            
+            localStorage.setItem('debattle_user', JSON.stringify(user));
+          } else {
+            // User doesn't exist in Firestore, create new user
+            const newUser: User = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+              username: (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, '_'),
+              photoURL: firebaseUser.photoURL || '',
+              rating: 1200,
+              provisionalRating: true,
+              gamesPlayed: 0,
+              wins: 0,
+              losses: 0,
+              draws: 0,
+              winStreak: 0,
+              bestWinStreak: 0,
+              win_rate: 0,
+              achievements: [],
+              xp: 0,
+              level: 1,
+              tier: 'bronze',
+              created_at: new Date(),
+              last_active: new Date(),
+              preferred_topics: ['technology', 'politics'],
+              debate_style: 'analytical',
+              bio: 'New debater on the platform!',
+              preferences: {
+                theme: 'auto' as 'auto',
+                notifications: {
+                  email: true,
+                  push: true,
+                  debate_invites: true,
+                  achievements: true
+                },
+                privacy: {
+                  profile_visible: true,
+                  show_rating: true,
+                  show_stats: true
+                }
+              },
+              stats: {
+                totalArgumentsPosted: 0,
+                averageResponseTime: 0,
+                favoriteTopics: [],
+                strongestCategories: []
+              }
+            };
+            
+            // Save new user to Firestore
+            await setDoc(userDocRef, newUser);
+            
+            set({ 
+              user: newUser,
+              isAuthenticated: true,
+              loading: false,
+              error: null 
+            });
+            
+            localStorage.setItem('debattle_user', JSON.stringify(newUser));
+          }
         } catch (error: any) {
           set({ 
             loading: false, 

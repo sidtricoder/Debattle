@@ -81,6 +81,7 @@ const LandingPage: React.FC = () => {
       icon: Zap,
       title: "Lightning-Fast Matchmaking",
       description: "Find your perfect debate opponent in under 10 seconds",
+      details: "Our advanced algorithm analyzes your skill level, debate preferences, and topic interests to connect you with the perfect opponent instantly.",
       gradient: "from-yellow-400 to-orange-500",
       bgGradient: "from-yellow-400/20 to-orange-500/20"
     },
@@ -88,6 +89,7 @@ const LandingPage: React.FC = () => {
       icon: Brain,
       title: "AI-Powered Judging",
       description: "Get instant, unbiased feedback on your arguments",
+      details: "Our AI evaluates your arguments for clarity, logic, and persuasiveness, providing detailed feedback to help you improve your debate skills.",
       gradient: "from-purple-400 to-pink-500",
       bgGradient: "from-purple-400/20 to-pink-500/20"
     },
@@ -95,6 +97,7 @@ const LandingPage: React.FC = () => {
       icon: Trophy,
       title: "ELO Rating System",
       description: "Climb from Bronze to Diamond like a chess grandmaster",
+      details: "Track your progress with our competitive ranking system. Win debates to climb the leaderboard and earn prestigious ranks and achievements.",
       gradient: "from-green-400 to-teal-500",
       bgGradient: "from-green-400/20 to-teal-500/20"
     },
@@ -102,6 +105,7 @@ const LandingPage: React.FC = () => {
       icon: Globe,
       title: "Global Community",
       description: "Debate with brilliant minds from 50+ countries",
+      details: "Join a diverse community of thinkers and speakers from around the world. Learn different perspectives and debate styles from various cultures.",
       gradient: "from-blue-400 to-indigo-500",
       bgGradient: "from-blue-400/20 to-indigo-500/20"
     }
@@ -206,6 +210,40 @@ const LandingPage: React.FC = () => {
         </div>
       </div>
 
+      <style>
+        {`
+          .flip-card {
+            perspective: 1000px;
+            height: 320px;
+            width: 288px;
+          }
+          .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+          }
+          .flip-card:hover .flip-card-inner {
+            transform: rotateY(180deg);
+          }
+          .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-sizing: border-box;
+          }
+          .flip-card-back {
+            transform: rotateY(180deg);
+          }
+        `}
+      </style>
+
       {/* Features Section */}
       <section id="features" className="relative z-10 py-20 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm snap-start">
         <div className="container mx-auto px-6">
@@ -233,19 +271,34 @@ const LandingPage: React.FC = () => {
             {features.map((feature, index) => (
               <motion.div
                 key={index}
-                className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-8 hover:scale-105 transition-all duration-300 hover:shadow-2xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col items-center`}
-                whileHover={{ scale: 1.05 }}
+                className="flip-card rounded-2xl cursor-pointer mx-auto"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * index, duration: 0.6 }}
               >
-                <feature.icon className={`w-12 h-12 mb-4 ${feature.gradient.replace('to-', 'text-')}`} />
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 text-center">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-center">
-                  {feature.description}
-                </p>
+                <div className="flip-card-inner rounded-2xl">
+                  {/* Front of the card */}
+                  <div className={`flip-card-front bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-full`}>
+                    <feature.icon className={`w-12 h-12 mb-4 ${feature.gradient.replace('to-', 'text-')}`} />
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 text-center">
+                      {feature.title}
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-center mt-4">
+                      {feature.description}
+                    </p>
+                  </div>
+                  
+                  {/* Back of the card */}
+                  <div className={`flip-card-back bg-gradient-to-br ${feature.bgGradient} rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-full`}>
+                    <h3 className="text-xl font-bold text-white mb-4 text-center">
+                      {feature.title}
+                    </h3>
+                    <p className="text-white/90 leading-relaxed text-center">
+                      {feature.details}
+                    </p>
+
+                  </div>
+                </div>
               </motion.div>
             ))}
           </motion.div>
@@ -255,14 +308,8 @@ const LandingPage: React.FC = () => {
       {/* FAQ Section */}
       <section
         id="faq"
-        className="relative z-10 py-32 px-2 md:px-0 snap-start"
-        style={{
-          background: 'linear-gradient(to bottom, #1e293b 0%, #5eead4 100%)',
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: 'cover',
-        }}
+        className="relative z-10 py-32 px-2 md:px-0 snap-start bg-transparent"
       >
-        <div className="absolute inset-0 w-full h-full pointer-events-none z-0 dark:block hidden" style={{background: 'linear-gradient(to bottom, #0f172a 0%, #22d3ee 100%)'}} />
         <div className="container mx-auto max-w-4xl relative z-10">
           <h2 className="text-3xl md:text-4xl font-bold mb-16 text-center bg-gradient-to-b from-blue-700 to-cyan-400 bg-clip-text text-transparent dark:from-cyan-200 dark:to-blue-400">Frequently Asked Questions</h2>
           <FAQStepper faqs={FAQS} />
@@ -303,7 +350,7 @@ function FAQStepper({ faqs }: FAQStepperProps) {
   }, [faqs.length]);
 
   return (
-    <div ref={sectionRef} className="relative min-h-[1200px] flex flex-col gap-16">
+    <div ref={sectionRef} className="relative min-h-[950px] flex flex-col gap-16">
       {faqs.map((faq: FAQ, idx: number) => {
         const isActive = idx === activeIdx;
         return (

@@ -175,30 +175,30 @@ const HistoryPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid md:grid-cols-4 gap-6 mb-8"
+          className="grid md:grid-cols-4 gap-0 mb-8 divide-x divide-gray-200 dark:divide-gray-700 bg-transparent"
         >
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-lg">
+          <div className="p-6 text-center bg-transparent">
             <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
               {stats.total}
             </div>
             <div className="text-gray-600 dark:text-gray-300">Total Debates</div>
           </div>
           
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-lg">
+          <div className="p-6 text-center bg-transparent">
             <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
               {stats.winRate}%
             </div>
             <div className="text-gray-600 dark:text-gray-300">Win Rate</div>
           </div>
           
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-lg">
+          <div className="p-6 text-center bg-transparent">
             <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
               {stats.totalRatingChange > 0 ? '+' : ''}{stats.totalRatingChange}
             </div>
             <div className="text-gray-600 dark:text-gray-300">Rating Change</div>
           </div>
           
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-lg">
+          <div className="p-6 text-center bg-transparent">
             <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">
               {stats.avgDuration}m
             </div>
@@ -211,7 +211,7 @@ const HistoryPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8"
+          className="bg-transparent p-6 mb-8 border-b border-gray-200 dark:border-gray-700"
         >
           <div className="flex flex-col md:flex-row gap-4">
             {/* Search */}
@@ -269,7 +269,7 @@ const HistoryPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="space-y-4"
+          className="divide-y-4 divide-gray-400 dark:divide-gray-700"
         >
           {sortedHistory.map((debate, index) => (
             <motion.div
@@ -277,7 +277,7 @@ const HistoryPage: React.FC = () => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 * index }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-200"
+              className="bg-transparent p-6"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -309,9 +309,9 @@ const HistoryPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-6 divide-x-4 divide-gray-400 dark:divide-gray-700">
                   {/* Score */}
-                  <div className="text-center">
+                  <div className="text-center pr-6">
                     <div className="text-lg font-bold text-gray-900 dark:text-white">
                       {debate.score.user} - {debate.score.opponent}
                     </div>
@@ -319,7 +319,7 @@ const HistoryPage: React.FC = () => {
                   </div>
 
                   {/* Rating Change */}
-                  <div className="text-center">
+                  <div className="text-center px-6">
                     <div className={`text-lg font-bold ${debate.ratingChange > 0 ? 'text-green-600 dark:text-green-400' : debate.ratingChange < 0 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
                       {debate.ratingChange > 0 ? '+' : ''}{debate.ratingChange}
                     </div>
@@ -327,7 +327,7 @@ const HistoryPage: React.FC = () => {
                   </div>
 
                   {/* Duration */}
-                  <div className="text-center">
+                  <div className="text-center px-6">
                     <div className="text-lg font-bold text-gray-900 dark:text-white">
                       {debate.duration}m
                     </div>
@@ -335,7 +335,7 @@ const HistoryPage: React.FC = () => {
                   </div>
 
                   {/* Date */}
-                  <div className="text-center">
+                  <div className="text-center pl-6">
                     <div className="text-sm font-medium text-gray-900 dark:text-white">
                       {formatDate(debate.date)}
                     </div>

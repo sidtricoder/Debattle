@@ -9,7 +9,6 @@ import {
   Settings, 
   Sun, 
   Moon, 
-  Bell,
   Trophy,
   TrendingUp,
   Sparkles,
@@ -41,16 +40,39 @@ const Header: React.FC = () => {
     { name: 'About', href: '#about', icon: Home },
   ];
 
-  // Handle scroll effect for landing page
+  // Handle click outside to close user menu
   useEffect(() => {
-    if (isLandingPage) {
-      const handleScroll = () => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const userMenu = document.querySelector('.user-menu');
+      const userButton = document.querySelector('.user-button');
+      
+      if (isUserMenuOpen && userMenu && !userMenu.contains(target) && !userButton?.contains(target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    // Handle scroll effect for landing page
+    const handleScroll = () => {
+      if (isLandingPage) {
         setIsScrolled(window.scrollY > 20);
-      };
+      }
+    };
+
+    // Add event listeners
+    document.addEventListener('mousedown', handleClickOutside);
+    if (isLandingPage) {
       window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
     }
-  }, [isLandingPage]);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (isLandingPage) {
+        window.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [isLandingPage, isUserMenuOpen]);
 
   // Check for dark mode on mount and when it changes
   useEffect(() => {
@@ -164,13 +186,7 @@ const Header: React.FC = () => {
             {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
 
-            {/* Notifications - only show for authenticated users */}
-            {isAuthenticated && (
-              <button className={`p-2 rounded-lg transition-colors duration-200 relative ${getTextClasses()} hover:bg-gray-100 dark:hover:bg-gray-700`}>
-            <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-          </button>
-            )}
+
 
           {isAuthenticated ? (
             <>
@@ -178,7 +194,7 @@ const Header: React.FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className={`flex items-center space-x-2 p-2 rounded-lg transition-colors duration-200 ${getTextClasses()} hover:bg-gray-100 dark:hover:bg-gray-700`}
+                  className={`user-button flex items-center space-x-2 p-2 rounded-lg transition-colors duration-200 ${getTextClasses()} hover:bg-gray-100 dark:hover:bg-gray-700`}
                 >
                   <img
                     src={user?.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face'}
@@ -196,7 +212,7 @@ const Header: React.FC = () => {
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50"
+                        className="user-menu absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50"
                   >
                         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                           <p className="text-sm font-medium text-gray-900 dark:text-white">

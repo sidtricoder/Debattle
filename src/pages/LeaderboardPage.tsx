@@ -117,10 +117,10 @@ const LeaderboardPage: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8 border-2 border-blue-200 dark:border-blue-800"
+              className="mb-8 px-0"
             >
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Your Ranking</h2>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4">
                 <div className="flex items-center gap-4">
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     #{userRank.rank}
@@ -130,7 +130,7 @@ const LeaderboardPage: React.FC = () => {
                     alt={userRank.displayName}
                     className="w-12 h-12 rounded-full"
                   />
-            <div>
+                  <div>
                     <div className="font-semibold text-gray-900 dark:text-white">
                       {userRank.displayName}
                     </div>
@@ -154,9 +154,9 @@ const LeaderboardPage: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8"
+            className="mb-8 px-0"
           >
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-4 border-b border-gray-200 dark:border-gray-700 pb-4">
               {/* Search */}
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -165,7 +165,7 @@ const LeaderboardPage: React.FC = () => {
                   placeholder="Search players..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -173,10 +173,10 @@ const LeaderboardPage: React.FC = () => {
               <select
                 value={selectedTier}
                 onChange={(e) => setSelectedTier(e.target.value)}
-                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {tiers.map(tier => (
-                  <option key={tier} value={tier}>
+                  <option key={tier} value={tier} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
                     {tier === 'all' ? 'All Tiers' : tier.charAt(0).toUpperCase() + tier.slice(1)}
                   </option>
                 ))}
@@ -186,11 +186,11 @@ const LeaderboardPage: React.FC = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="rating">Sort by Rating</option>
-                <option value="games">Sort by Games</option>
-                <option value="winRate">Sort by Win Rate</option>
+                <option value="rating" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Sort by Rating</option>
+                <option value="games" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Sort by Games</option>
+                <option value="winRate" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Sort by Win Rate</option>
               </select>
             </div>
           </motion.div>
@@ -200,32 +200,32 @@ const LeaderboardPage: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
+            className="overflow-hidden"
           >
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700">
+              <table className="w-full border-separate border-spacing-y-0">
+                <thead className="border-b border-gray-200 dark:border-gray-700">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Rank</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Player</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Rating</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Tier</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Games</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Win Rate</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Streak</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Rank</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Player</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Rating</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Tier</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Games</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Win Rate</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Streak</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Level</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody>
                   {sortedLeaderboard.map((player, index) => (
                     <motion.tr
                       key={player.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 * index }}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      className="transition-colors border-b border-gray-200 dark:border-gray-700"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 border-r border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-gray-900 dark:text-white">
                             #{player.rank}
@@ -233,7 +233,7 @@ const LeaderboardPage: React.FC = () => {
                           {getRankIcon(player.rank)}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 border-r border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-3">
                           <img
                             src={player.photoURL}
@@ -250,20 +250,20 @@ const LeaderboardPage: React.FC = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 border-r border-gray-200 dark:border-gray-700">
                         <div className="font-semibold text-gray-900 dark:text-white">
                           {player.rating}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTierColor(player.tier)}`}>
+                      <td className="px-6 py-4 border-r border-gray-200 dark:border-gray-700">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTierColor(player.tier)}`}> 
                           {player.tier}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-gray-900 dark:text-white">
+                      <td className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
                         {player.gamesPlayed}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 border-r border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-gray-900 dark:text-white">
                             {player.winRate}%
@@ -271,7 +271,7 @@ const LeaderboardPage: React.FC = () => {
                           <TrendingUp className="w-4 h-4 text-green-500" />
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-gray-900 dark:text-white">
+                      <td className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
                         {player.winStreak}
                       </td>
                       <td className="px-6 py-4 text-gray-900 dark:text-white">
@@ -291,8 +291,8 @@ const LeaderboardPage: React.FC = () => {
             transition={{ delay: 0.4 }}
             className="mt-8 grid md:grid-cols-3 gap-6"
           >
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="text-center flex flex-col items-center justify-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 bg-transparent shadow-none">
+              <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -301,8 +301,8 @@ const LeaderboardPage: React.FC = () => {
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">12,847</p>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="text-center flex flex-col items-center justify-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 bg-transparent shadow-none">
+              <div className="w-12 h-12 bg-green-50 dark:bg-green-950 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Target className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -311,8 +311,8 @@ const LeaderboardPage: React.FC = () => {
               <p className="text-2xl font-bold text-green-600 dark:text-green-400">1,247</p>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="text-center flex flex-col items-center justify-center bg-transparent shadow-none">
+              <div className="w-12 h-12 bg-purple-50 dark:bg-purple-950 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trophy className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
