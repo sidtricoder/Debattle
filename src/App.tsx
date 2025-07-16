@@ -3,8 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './components/auth/AuthProvider';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
+
 import DashboardPage from './pages/DashboardPage';
 import DebatePage from './pages/DebatePage';
 import FindDebatePage from './pages/FindDebatePage';
@@ -24,10 +23,7 @@ const App: React.FC = () => {
           {/* Landing page - no layout wrapper */}
             <Route path="/" element={<LandingPage />} />
           
-          {/* Auth pages - no layout wrapper */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            
+
           {/* Protected routes with layout */}
             <Route
               path="/dashboard"

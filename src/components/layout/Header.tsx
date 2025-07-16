@@ -17,7 +17,7 @@ import {
 import { useAuth } from '../auth/AuthProvider';
 
 const Header: React.FC = () => {
-  const { user, signOut, isAuthenticated } = useAuth();
+  const { user, signOut, isAuthenticated, signInWithGoogle } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -29,16 +29,20 @@ const Header: React.FC = () => {
   const isLandingPage = location.pathname === '/';
 
   // Navigation items - different for landing vs authenticated pages
-  const navigation = isAuthenticated ? [
-    { name: 'Dashboard', href: '/dashboard', icon: TrendingUp },
-    { name: 'Find Debate', href: '/find-debate', icon: Trophy },
-    { name: 'Practice', href: '/practice', icon: User },
-    { name: 'History', href: '/history', icon: TrendingUp },
-    { name: 'Leaderboard', href: '/leaderboard', icon: Trophy },
-  ] : [
+  const navigation = [
     { name: 'Features', href: '#features', icon: Sparkles },
     { name: 'About', href: '#about', icon: Home },
   ];
+
+  if (isAuthenticated) {
+    navigation.push(
+      { name: 'Dashboard', href: '/dashboard', icon: TrendingUp },
+      { name: 'Find Debate', href: '/find-debate', icon: Trophy },
+      { name: 'Practice', href: '/practice', icon: User },
+      { name: 'History', href: '/history', icon: TrendingUp },
+      { name: 'Leaderboard', href: '/leaderboard', icon: Trophy }
+    );
+  }
 
   // Handle click outside to close user menu
   useEffect(() => {
@@ -145,75 +149,73 @@ const Header: React.FC = () => {
                 className="w-10 h-10 rounded-xl shadow-lg bg-white transition-transform duration-200 group-hover:scale-105" 
               />
             </div>
-          <div className="flex flex-col justify-center leading-tight">
+            <div className="flex flex-col justify-center leading-tight">
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Debattle
               </span>
               <span className={`text-xs font-medium transition-colors duration-200 ${getSubtitleClasses()}`}>
                 The Arena of Ideas
               </span>
-          </div>
+            </div>
           </Link>
 
-        {/* Desktop Navigation */}
+          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  isActive(item.href)
+                    isActive(item.href)
                       ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
                       : `${getTextClasses()} ${getHoverClasses()}`
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
 
           {/* Right side actions */}
           <div className="flex items-center space-x-2">
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
               className={`p-2 rounded-lg transition-colors duration-200 ${getTextClasses()} hover:bg-gray-100 dark:hover:bg-gray-700`}
-          >
-            {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
+            >
+              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
 
-
-
-          {isAuthenticated ? (
-            <>
-              {/* User Menu */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className={`user-button flex items-center space-x-2 p-2 rounded-lg transition-colors duration-200 ${getTextClasses()} hover:bg-gray-100 dark:hover:bg-gray-700`}
-                >
-                  <img
-                    src={user?.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face'}
-                    alt={user?.displayName}
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-4">
+                {/* User Menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="user-button flex items-center space-x-2 p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <img
+                      src={user?.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face'}
+                      alt={user?.displayName}
                       className="w-8 h-8 rounded-full border-2 border-gray-200 dark:border-gray-600"
-                  />
-                    <span className="hidden sm:block text-sm font-medium">
-                    {user?.displayName}
-                  </span>
-                </button>
+                    />
+                    <span className="hidden sm:block text-sm font-medium text-gray-900 dark:text-white">
+                      {user?.displayName}
+                    </span>
+                  </button>
                   
                   <AnimatePresence>
-                {isUserMenuOpen && (
-                  <motion.div
+                    {isUserMenuOpen && (
+                      <motion.div
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
                         className="user-menu absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50"
-                  >
+                      >
                         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
                             {user?.displayName}
@@ -222,93 +224,89 @@ const Header: React.FC = () => {
                             {user?.email}
                           </p>
                         </div>
-                    <Link
-                      to={`/profile/${user?.uid}`}
+                        <Link
+                          to={`/profile/${user?.uid}`}
                           className="flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      <User className="w-4 h-4" />
-                      <span>Profile</span>
-                    </Link>
-                    <Link
-                      to="/profile"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <User className="w-4 h-4" />
+                          <span>Profile</span>
+                        </Link>
+                        <Link
+                          to="/settings"
                           className="flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      <Settings className="w-4 h-4" />
-                      <span>Settings</span>
-                    </Link>
-                    <button
-                      onClick={handleSignOut}
-                          className="flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors w-full text-left"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Sign Out</span>
-                    </button>
-                  </motion.div>
-                )}
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <Settings className="w-4 h-4" />
+                          <span>Settings</span>
+                        </Link>
+                        <button
+                          onClick={handleSignOut}
+                          className="flex items-center space-x-3 w-full px-4 py-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </motion.div>
+                    )}
                   </AnimatePresence>
+                </div>
               </div>
-            </>
-          ) : (
-              <div className="flex items-center space-x-3">
-              <Link
-                to="/login"
-                  className={`px-4 py-2 font-medium transition-colors duration-200 ${getTextClasses()} ${getHoverClasses()}`}
+            ) : (
+              <button
+                onClick={() => signInWithGoogle()}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
               >
-                Sign In
-              </Link>
-              <Link
-                  to="/register"
-                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-2"
-              >
-                  <Sparkles className="w-4 h-4" />
-                Get Started
-              </Link>
-            </div>
-          )}
+                <img 
+                  src="https://www.google.com/favicon.ico" 
+                  alt="Google" 
+                  className="w-4 h-4"
+                />
+                Sign in with Google
+              </button>
+            )}
 
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className={`md:hidden p-2 rounded-lg transition-colors duration-200 ${getTextClasses()} hover:bg-gray-100 dark:hover:bg-gray-700`}
-          >
-            {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Mobile Navigation */}
+        {/* Mobile Navigation */}
         <AnimatePresence>
-      {isMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-          className="md:hidden py-4 border-t border-gray-200 dark:border-gray-700"
-        >
-          <nav className="space-y-2">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
+              className="md:hidden py-4 border-t border-gray-200 dark:border-gray-700"
+            >
+              <nav className="space-y-2">
+                {navigation.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
                       className={`flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-colors ${
-                    isActive(item.href)
+                        isActive(item.href)
                           ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
                           : `${getTextClasses()} ${getHoverClasses()}`
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.name}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </motion.div>
-      )}
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
     </header>

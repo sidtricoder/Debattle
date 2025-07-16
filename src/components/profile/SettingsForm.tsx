@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../components/auth/AuthProvider';
-import { fetchUserFromFirestore, useAuthStore } from '../../stores/authStore';
 
 type ThemeType = 'light' | 'dark' | 'auto';
 interface Notifications {
@@ -38,13 +37,6 @@ const SettingsForm: React.FC = () => {
   });
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
-
-  // Always fetch the latest user data from Firestore on mount and when user changes
-  useEffect(() => {
-    if (user?.uid) {
-      fetchUserFromFirestore(user.uid, useAuthStore.setState);
-    }
-  }, [user?.uid]);
 
   useEffect(() => {
     setForm({

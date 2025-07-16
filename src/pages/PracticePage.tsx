@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Brain, Target, Clock, Star, Play, Pause, RotateCcw, MessageSquare, TrendingUp, Zap, Award, Users, Sparkles } from 'lucide-react';
-import { useAuthStore, fetchUserFromFirestore } from '../stores/authStore';
+import { useAuthStore } from '../stores/authStore';
 import { useDebateStore } from '../stores/debateStore';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
@@ -101,12 +101,7 @@ const PracticePage: React.FC = () => {
   const [showTips, setShowTips] = useState(false);
   const [isCreatingPractice, setIsCreatingPractice] = useState(false);
 
-  useEffect(() => {
-    if (user?.uid) {
-      fetchUserFromFirestore(user.uid, useAuthStore.setState);
-    }
-  }, [user?.uid]);
-
+  // User data is managed by the auth store
   const filteredTopics = practiceTopics.filter(topic => topic.difficulty === selectedDifficulty);
 
   const startPractice = async (topic: PracticeTopic) => {

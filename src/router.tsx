@@ -1,10 +1,8 @@
 import React, { lazy } from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 const HomePage = lazy(() => import('@/pages/LandingPage'));
-const LoginPage = lazy(() => import('@/pages/LoginPage'));
-const SignupPage = lazy(() => import('@/pages/RegisterPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const DebatePage = lazy(() => import('@/pages/DebatePage'));
 const NewDebatePage = lazy(() => import('@/pages/FindDebatePage'));
@@ -16,10 +14,7 @@ const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },
-  { path: '/login', element: <LoginPage /> },
-  { path: '/signup', element: <SignupPage /> },
   { path: '/dashboard', element: <ProtectedRoute><DashboardPage /></ProtectedRoute> },
-  // Fix: use debateId param, not id
   { path: '/debate/:debateId', element: <ProtectedRoute><DebatePage /></ProtectedRoute> },
   { path: '/debate/new', element: <ProtectedRoute><NewDebatePage /></ProtectedRoute> },
   { path: '/find-debate', element: <ProtectedRoute><NewDebatePage /></ProtectedRoute> },
