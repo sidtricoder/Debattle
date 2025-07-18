@@ -60,6 +60,12 @@ export interface Debate {
   startedAt?: number;
   endedAt?: number;
   isPractice?: boolean;
+  practiceSettings?: {
+    aiProvider: 'gemini' | 'llama' | 'gemma';
+    timeoutSeconds: number;
+    numberOfRounds: number;
+    userStance: 'pro' | 'con';
+  };
   aiPersonality?: string;
   practiceTips?: string[];
   judgment?: {
@@ -394,17 +400,22 @@ export const useDebateStore = create<DebateState>((set, get) => ({
       }
       
       const debate = debateDoc.data() as Debate;
+      const endTime = Date.now();
+      // Use startedAt if available, otherwise fall back to createdAt
+      const startTime = debate.startedAt || debate.createdAt;
+      
       const updatedDebate = {
         ...debate,
         status: 'completed' as const,
-        endedAt: Date.now(),
+        endedAt: endTime,
         judgment,
         participantIds: debate.participants.map(p => p.userId),
         metadata: {
           ...debate.metadata,
-          debateDuration: Date.now() - (debate.startedAt || debate.createdAt)
+          debateDuration: endTime - startTime
         }
       };
+      
       console.log('[DEBUG] endDebate: updatedDebate', updatedDebate);
       await updateDoc(debateRef, updatedDebate);
       

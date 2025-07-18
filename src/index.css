@@ -140,3 +140,133 @@
 * {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
+
+/* Custom Scrollbar Styles: Transparent background, thumb appears on hover */
+::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(16,185,129,0.18) 100%);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  opacity: 0;
+  transition: opacity 0.3s, background 0.3s;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Show thumb on hover of scrollbar area */
+:hover::-webkit-scrollbar-thumb,
+:focus::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb:hover {
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(59,130,246,0.22) 0%, rgba(16,185,129,0.28) 100%);
+}
+
+/* Dark mode scrollbar */
+html.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(59,130,246,0.22) 0%, rgba(16,185,129,0.28) 100%);
+}
+html.dark :hover::-webkit-scrollbar-thumb,
+html.dark :focus::-webkit-scrollbar-thumb,
+html.dark ::-webkit-scrollbar-thumb:hover {
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(59,130,246,0.32) 0%, rgba(16,185,129,0.38) 100%);
+}
+
+/* Firefox scrollbar: transparent track, thumb appears on hover */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s;
+}
+*:hover, *:focus {
+  scrollbar-color: rgba(59,130,246,0.18) transparent;
+}
+html.dark *:hover, html.dark *:focus {
+  scrollbar-color: rgba(59,130,246,0.28) transparent;
+}
+
+/* Hide all scrollbars by default, show on hover of scrollable area */
+/* Applies globally to all scrollable containers */
+
+/* Hide scrollbar by default */
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE 10+ */
+}
+*::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
+}
+
+/* Show scrollbar on hover of scrollable area */
+*:hover, *:focus {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(59,130,246,0.18) transparent !important;
+}
+*:hover::-webkit-scrollbar, *:focus::-webkit-scrollbar {
+  display: block !important;
+  width: 8px;
+  background: transparent;
+}
+*:hover::-webkit-scrollbar-thumb, *:focus::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(59,130,246,0.22) 0%, rgba(16,185,129,0.28) 100%);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  opacity: 1;
+  transition: opacity 0.3s, background 0.3s;
+}
+*:hover::-webkit-scrollbar-track, *:focus::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Dark mode scrollbar on hover */
+html.dark *:hover::-webkit-scrollbar-thumb, html.dark *:focus::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(59,130,246,0.32) 0%, rgba(16,185,129,0.38) 100%);
+}
+html.dark *:hover, html.dark *:focus {
+  scrollbar-color: rgba(59,130,246,0.28) transparent !important;
+}
+
+/* Proximity-based Scrollbar: hidden by default, appears when .show-scrollbar is present */
+.scrollbar-fade {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE 10+ */
+}
+.scrollbar-fade::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
+}
+
+.scrollbar-fade.show-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(59,130,246,0.18) transparent !important;
+}
+.scrollbar-fade.show-scrollbar::-webkit-scrollbar {
+  display: block !important;
+  width: 8px;
+  background: transparent;
+}
+.scrollbar-fade.show-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(59,130,246,0.22) 0%, rgba(16,185,129,0.28) 100%);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  opacity: 1;
+  transition: opacity 0.3s, background 0.3s;
+}
+.scrollbar-fade.show-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.dark .scrollbar-fade.show-scrollbar {
+  scrollbar-color: rgba(59,130,246,0.28) transparent !important;
+}
+html.dark .scrollbar-fade.show-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(59,130,246,0.32) 0%, rgba(16,185,129,0.38) 100%);
+}
+
+

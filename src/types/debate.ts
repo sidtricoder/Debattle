@@ -15,6 +15,18 @@ export interface Debate {
   settings: DebateSettings;
   spectators: string[];
   chatMessages: ChatMessage[];
+  // Practice mode fields
+  isPractice?: boolean;
+  practiceSettings?: {
+    aiProvider: 'gemini' | 'llama' | 'gemma';
+    timeoutSeconds: number;
+    numberOfRounds: number;
+    userStance: 'pro' | 'con';
+  };
+  aiPersonality?: string;
+  practiceTips?: string[];
+  currentRound?: number;
+  judgment?: any;
 }
 
 export interface DebateTopic {

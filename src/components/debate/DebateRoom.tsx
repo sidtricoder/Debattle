@@ -35,7 +35,8 @@ import {
   Mic,
   Flag,
   Sun,
-  Moon
+  Moon,
+  RotateCcw
 } from 'lucide-react';
 // Remove: import { Client } from "@gradio/client";
 
@@ -79,8 +80,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
   const [localSubmittedArguments, setLocalSubmittedArguments] = useState<DebateArgument[]>([]);
   const [isJudging, setIsJudging] = useState(false);
   const [selectedJudge, setSelectedJudge] = useState<'gemini' | 'llama' | 'gemma'>('gemini');
-  const [showJudgeSelect, setShowJudgeSelect] = useState(false);
-  const [hasChosenJudge, setHasChosenJudge] = useState(false);
+  const [hasHandledRoundsComplete, setHasHandledRoundsComplete] = useState(false);
   
   const argumentInputRef = useRef<HTMLTextAreaElement>(null);
   const debateContainerRef = useRef<HTMLDivElement>(null);
@@ -97,6 +97,16 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
 
   // Add browser detection for Brave and Firefox
   const [isBraveOrFirefox, setIsBraveOrFirefox] = useState(false);
+
+  // Practice mode timeout state
+  const [practiceTimeLeft, setPracticeTimeLeft] = useState<number | null>(null);
+  const [practiceTimeoutId, setPracticeTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [practiceSettings, setPracticeSettings] = useState<any>(null);
+  const [currentRound, setCurrentRound] = useState(1);
+  const [userArgumentsInRound, setUserArgumentsInRound] = useState(0);
+  const [aiArgumentsInRound, setAiArgumentsInRound] = useState(0);
+  const [hasEndedDueToRounds, setHasEndedDueToRounds] = useState(false);
+  const [hasEndedDueToTimeout, setHasEndedDueToTimeout] = useState(false);
 
   // Helper: Convert Blob to base64 (if needed)
   const blobToBase64 = (blob: Blob): Promise<string> => {
@@ -225,6 +235,110 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
     };
   }, [draggingRef.current]);
 
+  // Practice mode timeout and round tracking
+  useEffect(() => {
+    if (!currentDebate || !isPracticeMode) return;
+    
+    // Load practice settings from debate data
+    if ((currentDebate as any).practiceSettings && !practiceSettings) {
+      setPracticeSettings((currentDebate as any).practiceSettings);
+    }
+  }, [currentDebate, isPracticeMode, practiceSettings]);
+
+  // Practice mode timeout countdown
+  useEffect(() => {
+    if (!isPracticeMode || !practiceSettings || !isMyTurn || practiceTimeLeft === null) return;
+    
+    // Disable timer if debate is completed
+    if (currentDebate?.status === 'completed') {
+      setPracticeTimeLeft(null);
+      if (practiceTimeoutId) {
+        clearTimeout(practiceTimeoutId);
+        setPracticeTimeoutId(null);
+      }
+      return;
+    }
+
+    if (practiceTimeLeft <= 0) {
+      // Time's up - auto-end debate with AI judgment (same as End Debate button)
+      handleEndDebate();
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setPracticeTimeLeft(prev => prev !== null ? prev - 1 : null);
+    }, 1000);
+
+    setPracticeTimeoutId(timeoutId);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [practiceTimeLeft, isPracticeMode, practiceSettings, isMyTurn, currentDebate?.status]);
+
+  // Start timeout when it's user's turn in practice mode
+  useEffect(() => {
+    if (!isPracticeMode || !practiceSettings || !isMyTurn) return;
+    
+    // Start timeout countdown
+    const timeoutSeconds = practiceSettings.timeoutSeconds || 300;
+    setPracticeTimeLeft(timeoutSeconds); // Already in seconds
+  }, [isMyTurn, isPracticeMode, practiceSettings]);
+
+  // Track rounds and auto-submit when complete
+  useEffect(() => {
+    if (!isPracticeMode || !practiceSettings || !currentDebate) return;
+
+    const userArgs = currentDebate.arguments?.filter(arg => arg.userId === currentUser?.uid).length || 0;
+    const aiArgs = currentDebate.arguments?.filter(arg => arg.userId === 'ai_opponent').length || 0;
+    
+    setUserArgumentsInRound(userArgs);
+    setAiArgumentsInRound(aiArgs);
+    
+    // Calculate current round (each round = 1 user + 1 AI argument)
+    const completedRounds = Math.min(userArgs, aiArgs);
+    setCurrentRound(completedRounds + 1);
+    
+    // Check if we've reached the maximum number of rounds
+    if (completedRounds >= practiceSettings.numberOfRounds && !hasHandledRoundsComplete) {
+      setHasHandledRoundsComplete(true);
+      handleRoundsComplete();
+    }
+  }, [currentDebate?.arguments, isPracticeMode, practiceSettings, currentUser, hasHandledRoundsComplete]);
+
+  // Handle timeout end
+  const handleTimeoutEnd = async () => {
+    if (!currentDebate || !currentUser || !currentDebate.id) return;
+    
+    try {
+      // Create a timeout judgment
+      const timeoutJudgment = {
+        winner: 'timeout',
+        scores: {},
+        feedback: {},
+        reasoning: 'Debate ended due to timeout',
+        fallaciesDetected: [],
+        highlights: []
+      };
+      await endDebate(currentDebate.id, timeoutJudgment);
+      alert('Time\'s up! The debate has ended.');
+    } catch (error) {
+      console.error('Failed to end debate on timeout:', error);
+    }
+  };
+
+  // Handle rounds complete
+  const handleRoundsComplete = async () => {
+    if (!currentDebate || !currentUser || !currentDebate.id) return;
+    
+    try {
+      // Rounds completed - auto-end debate with AI judgment (same as End Debate button)
+      handleEndDebate();
+    } catch (error) {
+      console.error('Failed to end debate on rounds complete:', error);
+    }
+  };
+
   // Get coaching tip
   const getCoachingTip = async () => {
     if (!currentDebate || !currentUser) return;
@@ -289,6 +403,56 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
     }
   };
 
+
+
+  // New AI response function that takes the transcript
+  const generateAIResponseWithTranscript = async (transcript: string) => {
+    if (!currentDebate || !debateId || !practiceSettings) {
+      console.log('[DEBUG] generateAIResponseWithTranscript: missing currentDebate or debateId or practiceSettings');
+      return;
+    }
+    try {
+      console.log('[DEBUG] generateAIResponseWithTranscript called');
+      const aiPersonality = currentDebate.aiPersonality || 'Balanced and analytical';
+      // Always get AI stance from participants array
+      const aiStance = aiParticipant?.stance || 'pro';
+      let aiResponse = '';
+      if (practiceSettings.aiProvider === 'gemini') {
+        aiResponse = await geminiService.generateAIResponse(
+          currentDebate.topic,
+          aiStance,
+          aiPersonality,
+          transcript,
+          currentDebate.currentRound
+        );
+      } else if (practiceSettings.aiProvider === 'llama' || practiceSettings.aiProvider === 'gemma') {
+        // Compose a prompt that includes the AI's stance
+        let prompt;
+        if (transcript.trim() === '') {
+          // No transcript provided - make the first argument
+          prompt = `You are debating as the ${aiStance.toUpperCase()} side. Topic: ${currentDebate.topic}\n\nStart the debate with a strong opening argument as the ${aiStance.toUpperCase()} side.`;
+        } else {
+          // Respond to existing transcript
+          prompt = `You are debating as the ${aiStance.toUpperCase()} side. Topic: ${currentDebate.topic}\nTranscript so far:\n${transcript}\nRespond as the ${aiStance.toUpperCase()} side.`;
+        }
+        const model = practiceSettings.aiProvider === 'llama' ? 'llama-3.3-70b-versatile' : 'gemma2-9b-it';
+        aiResponse = await judgeWithGroq(prompt, model);
+      }
+      console.log('[DEBUG] AI generated response (with transcript):', aiResponse);
+      await submitArgument(debateId, 'ai_opponent', aiResponse);
+      console.log('[DEBUG] AI argument submitted to Firestore (with transcript)');
+    } catch (error) {
+      console.error('[DEBUG] Failed to generate AI response (with transcript):', error);
+    }
+  };
+
+  // Get judge selection from practice settings
+  useEffect(() => {
+    if (isPracticeMode && currentDebate?.practiceSettings?.aiProvider) {
+      setSelectedJudge(currentDebate.practiceSettings.aiProvider);
+    }
+  }, [isPracticeMode, currentDebate?.practiceSettings?.aiProvider]);
+
   // useEffect to trigger AI response in practice mode when it's AI's turn
   useEffect(() => {
     if (
@@ -298,6 +462,8 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
       currentDebate.status === 'active'
     ) {
       const lastArg = currentDebate.arguments[currentDebate.arguments.length - 1];
+      
+      // Case 1: AI should respond to user's argument
       if (
         lastArg &&
         lastArg.userId !== 'ai_opponent' &&
@@ -313,40 +479,21 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
         console.log('[DEBUG] AI transcript for Gemini:', transcript);
         generateAIResponseWithTranscript(transcript).finally(() => setIsAITyping(false));
       }
+      
+      // Case 2: AI should start the debate (no arguments yet)
+      else if (
+        currentDebate.arguments.length === 0 &&
+        !isAITyping &&
+        !lastAIGeneratedArgumentId
+      ) {
+        console.log('[DEBUG] AI starting the debate - no arguments yet');
+        setIsAITyping(true);
+        // Generate opening argument for AI
+        const openingPrompt = `You are debating as the ${aiParticipant?.stance?.toUpperCase() || 'PRO'} side. Topic: ${currentDebate.topic}\n\nStart the debate with a strong opening argument.`;
+        generateAIResponseWithTranscript('').finally(() => setIsAITyping(false));
+      }
     }
-  }, [currentDebate?.arguments, isPracticeMode, currentDebate?.currentTurn, currentDebate?.status, lastAIGeneratedArgumentId]);
-
-  // New AI response function that takes the transcript
-  const generateAIResponseWithTranscript = async (transcript: string) => {
-    if (!currentDebate || !debateId) {
-      console.log('[DEBUG] generateAIResponseWithTranscript: missing currentDebate or debateId');
-      return;
-    }
-    try {
-      console.log('[DEBUG] generateAIResponseWithTranscript called');
-      const aiPersonality = currentDebate.aiPersonality || 'Balanced and analytical';
-      const aiStance = currentDebate.participants.find(p => p.userId === 'ai_opponent')?.stance || 'con';
-      const aiResponse = await geminiService.generateAIResponse(
-        currentDebate.topic,
-        aiStance,
-        aiPersonality,
-        transcript,
-        currentDebate.currentRound
-      );
-      console.log('[DEBUG] AI generated response (with transcript):', aiResponse);
-      await submitArgument(debateId, 'ai_opponent', aiResponse);
-      console.log('[DEBUG] AI argument submitted to Firestore (with transcript)');
-    } catch (error) {
-      console.error('[DEBUG] Failed to generate AI response (with transcript):', error);
-    }
-  };
-
-  // Show judge selection modal only once at the start of practice mode
-  useEffect(() => {
-    if (isPracticeMode && currentDebate && currentDebate.arguments.length === 0 && !hasChosenJudge) {
-      setShowJudgeSelect(true);
-    }
-  }, [isPracticeMode, currentDebate, hasChosenJudge]);
+  }, [currentDebate?.arguments, isPracticeMode, currentDebate?.currentTurn, currentDebate?.status, lastAIGeneratedArgumentId, isAITyping]);
 
   const buildJudgmentPrompt = () => {
     // Build the same JSON-format prompt as for Gemini, but explicit for Deepseek
@@ -358,11 +505,11 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
 
   // Handle debate end
   const handleEndDebate = async () => {
-    if (!currentDebate || !debateId) return;
+    if (!currentDebate || !debateId || !practiceSettings) return;
     setIsJudging(true);
     try {
       let judgment;
-      if (selectedJudge === 'gemini') {
+      if (practiceSettings.aiProvider === 'gemini') {
         judgment = await geminiService.judgeDebate(
           currentDebate.topic,
           currentDebate.arguments.map(arg => ({
@@ -378,9 +525,9 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
             stance: p.stance
           }))
         );
-      } else if (selectedJudge === 'llama' || selectedJudge === 'gemma') {
+      } else if (practiceSettings.aiProvider === 'llama' || practiceSettings.aiProvider === 'gemma') {
         const prompt = buildJudgmentPrompt();
-        const model = selectedJudge === 'llama' ? 'llama-3.3-70b-versatile' : 'gemma-2b-it';
+        const model = practiceSettings.aiProvider === 'llama' ? 'llama-3.3-70b-versatile' : 'gemma2-9b-it';
         const response = await judgeWithGroq(prompt, model);
         if (!response) throw new Error('No response from Groq');
         const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -577,6 +724,11 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
     }
   }, [currentDebate]);
 
+  // Reset flag when debate or arguments reset
+  useEffect(() => {
+    setHasHandledRoundsComplete(false);
+  }, [debateId]);
+
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
 
   if (deleted) {
@@ -684,8 +836,9 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
     );
   }
 
+  // In chat rendering, always get stance from participants array
   const myParticipant = currentDebate.participants.find(p => p.userId === currentUser?.uid);
-  const opponent = currentDebate.participants.find(p => p.userId !== currentUser?.uid);
+  const aiParticipant = currentDebate.participants.find(p => p.userId === 'ai_opponent');
   const canSubmit = isMyTurn && argument.trim().length > 0 && !isSubmitting;
   const isDebateActive = currentDebate.status === 'active';
   const isDebateCompleted = currentDebate.status === 'completed';
@@ -722,7 +875,25 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
     <div className="relative min-h-screen w-full flex flex-col bg-black text-white" style={{background: '#000'}}>
       {/* Always show header at the top */}
       <div className="w-full flex items-center justify-between px-6 py-4 bg-black/80 border-b border-gray-800" style={{position: 'sticky', top: 0, left: 0, zIndex: 50}}>
-        <div className="text-xl font-bold truncate max-w-[70vw]" title={currentDebate?.topic || 'Loading...'}>{currentDebate?.topic || 'Loading...'}</div>
+        <div className="flex items-center gap-4">
+          <div className="text-xl font-bold truncate max-w-[70vw]" title={currentDebate?.topic || 'Loading...'}>{currentDebate?.topic || 'Loading...'}</div>
+          {/* Practice Mode Timer */}
+          {isPracticeMode && practiceTimeLeft !== null && isMyTurn && !isDebateCompleted && (
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-gray-400" />
+              <span className="text-sm font-medium">
+                {Math.floor(practiceTimeLeft / 60)}:{(practiceTimeLeft % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
+          )}
+          {/* Round Counter */}
+          {isPracticeMode && practiceSettings && (
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <RotateCcw className="w-4 h-4" />
+              <span>Round {currentRound}/{practiceSettings.numberOfRounds}</span>
+            </div>
+          )}
+        </div>
         <button
           onClick={() => {
             const newDarkMode = !isDarkMode;
@@ -735,6 +906,24 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
           {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
       </div>
+      
+      {/* Practice Mode Visual Timer Bar */}
+      {isPracticeMode && practiceTimeLeft !== null && isMyTurn && practiceSettings && !isDebateCompleted && (
+        <div className="w-full h-1 bg-gray-800">
+          <div 
+            className="h-full transition-all duration-1000 ease-linear"
+            style={{
+              width: `${(practiceTimeLeft / practiceSettings.timeoutSeconds) * 100}%`,
+              background: `linear-gradient(to right, 
+                ${practiceTimeLeft / practiceSettings.timeoutSeconds > 0.6 ? '#166534' : 
+                  practiceTimeLeft / practiceSettings.timeoutSeconds > 0.4 ? '#10b981' : 
+                  practiceTimeLeft / practiceSettings.timeoutSeconds > 0.2 ? '#f59e0b' : 
+                  practiceTimeLeft / practiceSettings.timeoutSeconds > 0.1 ? '#ef4444' : '#7f1d1d'})`
+            }}
+          />
+        </div>
+      )}
+      
       {/* Content below header: loading or main debate UI */}
       {!currentDebate ? (
         <div className="flex flex-col items-center justify-center flex-1 w-full min-h-screen bg-black text-white">
@@ -789,7 +978,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
         // ... main debate UI ...
         <>
           {/* Main chat area with WhatsApp-like layout */}
-          <div className="flex-1 flex flex-col justify-end px-2 md:px-8 py-6 overflow-y-auto" ref={debateContainerRef} style={{height: 'calc(100vh - 120px)'}}>
+          <div className="flex-1 flex flex-col justify-end px-2 md:px-8 py-6 overflow-y-auto scrollbar-fade" ref={debateContainerRef} style={{height: 'calc(100vh - 120px)'}}>
             {isJudging && (
               <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-80">
                 <div className="w-64 h-2 bg-gray-700 rounded-full overflow-hidden mb-6">
@@ -801,8 +990,17 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
             {currentDebate.arguments.length === 0 && pendingArguments.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <MessageSquare className="w-12 h-12 mb-4 text-gray-600" />
-                <p className="text-lg font-medium">No arguments yet. Be the first to strike! ⚔️</p>
-                <p className="text-sm text-gray-500 mt-2">Start the debate with a powerful opening argument</p>
+                {currentDebate.currentTurn === 'ai_opponent' ? (
+                  <>
+                    <p className="text-lg font-medium">AI opponent is starting the debate! 🤖</p>
+                    <p className="text-sm text-gray-500 mt-2">Waiting for AI to make the first argument...</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-lg font-medium">No arguments yet. Be the first to strike! ⚔️</p>
+                    <p className="text-sm text-gray-500 mt-2">Start the debate with a powerful opening argument</p>
+                  </>
+                )}
                 {deleteCountdown !== null && (
                   <div className="mt-4 text-red-400 text-base font-semibold">
                     This debate will be deleted in {deleteCountdown} second{deleteCountdown !== 1 ? 's' : ''} if no argument is made.
@@ -817,10 +1015,32 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
                   const isPro = participant?.stance === 'pro';
                   const isCon = participant?.stance === 'con';
                   const isMine = arg.userId === currentUser?.uid;
-                  // Avatar image and alignment by stance (con: left, pro: right)
-                  const avatarSrc = isPro ? '/pro-right.png' : '/con-left.png';
-                  const alignment = isCon ? 'justify-start' : 'justify-end'; // con: left, pro: right
-                  const bubbleAlign = isCon ? 'flex-row' : 'flex-row-reverse';
+                  
+                  // Stance toggle logic: if user chose con stance, swap sides and images
+                  const userStance = practiceSettings?.userStance || 'pro';
+                  const shouldSwapSides = userStance === 'con';
+                  
+                  // Avatar image with stance toggle support
+                  let avatarSrc;
+                  if (shouldSwapSides) {
+                    // If user chose con stance, swap the images
+                    avatarSrc = isPro ? '/pro-left.png' : '/con-right.png';
+                  } else {
+                    // Default: pro on right, con on left
+                    avatarSrc = isPro ? '/pro-right.png' : '/con-left.png';
+                  }
+                  
+                  // Alignment with stance toggle support
+                  let alignment, bubbleAlign;
+                  if (shouldSwapSides) {
+                    // If user chose con stance, swap sides: pro on left, con on right
+                    alignment = isPro ? 'justify-start' : 'justify-end';
+                    bubbleAlign = isPro ? 'flex-row' : 'flex-row-reverse';
+                  } else {
+                    // Default: con on left, pro on right
+                    alignment = isCon ? 'justify-start' : 'justify-end';
+                    bubbleAlign = isCon ? 'flex-row' : 'flex-row-reverse';
+                  }
                   return (
                     <div
                       key={arg.id}
@@ -862,21 +1082,50 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
                   );
                 })}
                 {/* AI Typing Indicator: only when it's AI's turn and after user's pending argument */}
-                {isAITyping && !isDebateCompleted && currentDebate.currentTurn === 'ai_opponent' && (
-                  <div className="w-full flex justify-end mb-2">
-                    <div className="flex flex-row-reverse items-end gap-3 max-w-[80%]">
-                      <img
-                        src="/pro-right.png"
-                        alt="AI Opponent"
-                        className="w-32 h-40 object-cover rounded-3xl border-2 border-gray-700 bg-black shadow-md"
-                        style={{minWidth: 128, minHeight: 160}}
-                      />
-                      <div className="rounded-2xl px-5 py-3 shadow-lg text-base bg-[#1a1a1a] border-r-4 border-green-500 flex items-center">
-                        <TypingIndicator />
+                {isAITyping && !isDebateCompleted && currentDebate.currentTurn === 'ai_opponent' && (() => {
+                  // Find AI participant
+                  const aiParticipant = currentDebate.participants.find(p => p.userId === 'ai_opponent');
+                  const isAIPro = aiParticipant?.stance === 'pro';
+                  const isAICon = aiParticipant?.stance === 'con';
+                  
+                  // Stance toggle logic for AI typing indicator
+                  const userStance = practiceSettings?.userStance || 'pro';
+                  const shouldSwapSides = userStance === 'con';
+                  
+                  // AI avatar image with stance toggle support
+                  let aiAvatarSrc;
+                  if (shouldSwapSides) {
+                    aiAvatarSrc = isAIPro ? '/pro-left.png' : '/con-right.png';
+                  } else {
+                    aiAvatarSrc = isAIPro ? '/pro-right.png' : '/con-left.png';
+                  }
+                  
+                  // AI alignment with stance toggle support
+                  let aiAlignment, aiBubbleAlign;
+                  if (shouldSwapSides) {
+                    aiAlignment = isAIPro ? 'justify-start' : 'justify-end';
+                    aiBubbleAlign = isAIPro ? 'flex-row' : 'flex-row-reverse';
+                  } else {
+                    aiAlignment = isAICon ? 'justify-start' : 'justify-end';
+                    aiBubbleAlign = isAICon ? 'flex-row' : 'flex-row-reverse';
+                  }
+                  
+                  return (
+                    <div className={`w-full flex ${aiAlignment} mb-2`}>
+                      <div className={`flex ${aiBubbleAlign} items-end gap-3 max-w-[80%]`}>
+                        <img
+                          src={aiAvatarSrc}
+                          alt="AI Opponent"
+                          className="w-32 h-40 object-cover rounded-3xl border-2 border-gray-700 bg-black shadow-md"
+                          style={{minWidth: 128, minHeight: 160}}
+                        />
+                        <div className="rounded-2xl px-5 py-3 shadow-lg text-base bg-[#1a1a1a] border-r-4 border-green-500 flex items-center">
+                          <TypingIndicator />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </>
             )}
           </div>
@@ -1193,24 +1442,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
             </Modal>
           )}
 
-          {/* Judge Selection Modal */}
-          {showJudgeSelect && (
-            <Modal open={showJudgeSelect} onClose={() => {}}>
-              <div className="p-6 max-w-md mx-auto">
-                <h3 className="text-lg font-semibold mb-4">Choose your Judge</h3>
-                <select
-                  className="w-full p-2 rounded border border-gray-400 mb-4 text-black"
-                  value={selectedJudge}
-                  onChange={e => setSelectedJudge(e.target.value as 'gemini' | 'llama' | 'gemma')}
-                >
-                  <option value="gemini">Gemini (Google)</option>
-                  <option value="llama">Llama-70b (Groq)</option>
-                  <option value="gemma">Gemma2-9b (Groq)</option>
-                </select>
-                <Button onClick={() => { setShowJudgeSelect(false); setHasChosenJudge(true); }} className="w-full">Start Debate</Button>
-              </div>
-            </Modal>
-          )}
+
         </>
       )}
     </div>
