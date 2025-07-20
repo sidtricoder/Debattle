@@ -450,7 +450,7 @@ export const useDebateStore = create<DebateState>((set, get) => ({
         status: 'completed' as const,
         endedAt: endTime,
         judgment,
-        ratingChanges,
+        ...(ratingChanges && { ratingChanges }),
         participantIds: debate.participants.map(p => p.userId),
         metadata: {
           ...debate.metadata,
