@@ -98,7 +98,7 @@ const DashboardPage: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, [user?.uid]);
+  }, [user?.uid]); // Removed refreshUserData from dependencies
 
   const getTierInfo = (rating: number) => {
     if (rating >= 2000) return { name: 'Diamond', color: 'from-blue-400 to-indigo-500', icon: Crown };

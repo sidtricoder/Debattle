@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useDebateStore } from '../stores/debateStore';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
+import { PracticeSettingsModal } from '../components/practice/PracticeSettingsModal';
 
 interface PracticeTopic {
   id: string;
@@ -100,6 +101,8 @@ const PracticePage: React.FC = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate');
   const [showTips, setShowTips] = useState(false);
   const [isCreatingPractice, setIsCreatingPractice] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [pendingTopic, setPendingTopic] = useState<PracticeTopic | null>(null);
 
   // User data is managed by the auth store
   const filteredTopics = practiceTopics.filter(topic => topic.difficulty === selectedDifficulty);
@@ -110,32 +113,48 @@ const PracticePage: React.FC = () => {
       return;
     }
 
+    setPendingTopic(topic);
+    setShowSettingsModal(true);
+  };
+
+  const createPracticeWithSettings = async (settings: {
+    aiProvider: 'gemini' | 'llama' | 'gemma';
+    timeoutSeconds: number;
+    numberOfRounds: number;
+    userStance: 'pro' | 'con';
+  }) => {
+    if (!user || !pendingTopic) {
+      alert('Please sign in to start practice');
+      return;
+    }
+
     setIsCreatingPractice(true);
-    setSelectedTopic(topic);
+    setSelectedTopic(pendingTopic);
 
     try {
-      console.log('Starting practice with topic:', topic.title);
+      console.log('Starting practice with topic:', pendingTopic.title);
       
       // Create a practice debate with all metadata
       const debateId = await useDebateStore.getState().createDebate(
-        topic.title,
-        topic.category.toLowerCase(),
-        topic.difficulty === 'beginner' ? 2 : topic.difficulty === 'intermediate' ? 5 : 8
+        pendingTopic.title,
+        pendingTopic.category.toLowerCase(),
+        pendingTopic.difficulty === 'beginner' ? 2 : pendingTopic.difficulty === 'intermediate' ? 5 : 8
       );
       
       console.log('Created debate with ID:', debateId);
 
-      // Join as pro
-      await useDebateStore.getState().joinDebate(debateId, user.uid, 'pro');
-      console.log('Joined debate as pro');
+      // Join with user's chosen stance
+      await useDebateStore.getState().joinDebate(debateId, user.uid, settings.userStance);
+      console.log(`Joined debate as ${settings.userStance}`);
 
       // Add AI opponent with proper participant data
       const currentTime = Date.now();
+      const aiStance: 'pro' | 'con' = settings.userStance === 'pro' ? 'con' : 'pro';
       const aiParticipant = {
         userId: 'ai_opponent',
         displayName: 'AI Opponent',
         rating: 1200,
-        stance: 'con' as const,
+        stance: aiStance,
         isOnline: true,
         isTyping: false,
         lastSeen: currentTime
@@ -146,17 +165,23 @@ const PracticePage: React.FC = () => {
       try {
         await updateDoc(debateRef, {
           isPractice: true,
-          aiPersonality: topic.aiPersonality,
-          practiceTips: topic.tips
+          aiPersonality: pendingTopic.aiPersonality,
+          practiceTips: pendingTopic.tips,
+          practiceSettings: {
+            aiProvider: settings.aiProvider,
+            timeoutSeconds: settings.timeoutSeconds,
+            numberOfRounds: settings.numberOfRounds,
+            userStance: settings.userStance
+          }
         });
         console.log('Added practice metadata');
         
         // Add both user and AI to participants and participantIds
         const userParticipant = {
           userId: user.uid,
-          displayName: user.displayName || 'You',
+          displayName: user.displayName || `User ${user.uid.slice(-4)}`,
           rating: 1200,
-          stance: 'pro',
+          stance: settings.userStance,
           isOnline: true,
           isTyping: false,
           lastSeen: currentTime
@@ -165,6 +190,11 @@ const PracticePage: React.FC = () => {
           participants: [userParticipant, aiParticipant],
           participantIds: [user.uid, 'ai_opponent']
         });
+        // Set currentTurn to the pro side
+        const proParticipant = [userParticipant, aiParticipant].find(p => p.stance === 'pro');
+        if (proParticipant) {
+          await updateDoc(debateRef, { currentTurn: proParticipant.userId });
+        }
         console.log('[DEBUG] PracticePage: Set participants and participantIds to', [user.uid, 'ai_opponent']);
 
         // Force status to 'active' after both participants are added
@@ -198,15 +228,16 @@ const PracticePage: React.FC = () => {
 
     } catch (error: any) {
       console.error('Failed to start practice:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack
-      });
-      alert(`Failed to start practice: ${error.message}`);
+      alert('Failed to start practice. Please try again.');
     } finally {
       setIsCreatingPractice(false);
+      setPendingTopic(null);
     }
+  };
+
+  const handleCloseSettingsModal = () => {
+    setShowSettingsModal(false);
+    setPendingTopic(null);
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -573,6 +604,20 @@ const PracticePage: React.FC = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Practice Settings Modal */}
+      {pendingTopic && (
+        <PracticeSettingsModal
+          isOpen={showSettingsModal}
+          onClose={handleCloseSettingsModal}
+          onStart={createPracticeWithSettings}
+          topic={{
+            title: pendingTopic.title,
+            category: pendingTopic.category,
+            difficulty: pendingTopic.difficulty
+          }}
+        />
+      )}
     </div>
   );
 };

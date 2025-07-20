@@ -29,8 +29,8 @@ if (!groqApiKey) {
 }
 const groq = new Groq({ apiKey: groqApiKey, dangerouslyAllowBrowser: true });
 
-// Supported models: 'llama-3.3-70b-versatile', 'gemma-2b-it'
-export async function judgeWithGroq(prompt: string, model: 'llama-3.3-70b-versatile' | 'gemma-2b-it') {
+// Supported models: 'llama-3.3-70b-versatile', 'gemma2-9b-it'
+export async function judgeWithGroq(prompt: string, model: 'llama-3.3-70b-versatile' | 'gemma2-9b-it') {
   const completion = await groq.chat.completions.create({
     messages: [
       {

@@ -202,7 +202,7 @@ const LeaderboardPage: React.FC = () => {
             transition={{ delay: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-fade">
               <table className="w-full border-separate border-spacing-y-0">
                 <thead className="border-b border-gray-200 dark:border-gray-700">
                   <tr>

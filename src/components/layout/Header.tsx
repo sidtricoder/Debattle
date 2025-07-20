@@ -260,7 +260,7 @@ const Header: React.FC = () => {
                   alt="Google" 
                   className="w-4 h-4"
                 />
-                Sign in with Google
+                Sign in
               </button>
             )}
 

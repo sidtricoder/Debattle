@@ -47,7 +47,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children, ariaLabel
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className="bg-white dark:bg-dark rounded-2xl shadow-2xl p-8 max-w-lg w-full relative"
+            className="bg-white dark:bg-dark rounded-2xl shadow-2xl p-8 max-w-lg w-full relative scrollbar-fade"
             onClick={e => e.stopPropagation()}
           >
             {children}

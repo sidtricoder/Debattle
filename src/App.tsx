@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './components/auth/AuthProvider';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -13,9 +13,31 @@ import ProfilePage from './pages/ProfilePage';
 import PracticePage from './pages/PracticePage';
 import NotFoundPage from './pages/NotFoundPage';
 import LandingPage from './pages/LandingPage';
+import UsersDebatePage from './pages/UsersDebatePage';
 import './index.css';
 
+function useProximityScrollbar() {
+  useEffect(() => {
+    function handleMouseMove(e: MouseEvent) {
+      const threshold = 24;
+      const x = e.clientX;
+      const windowWidth = window.innerWidth;
+      const nearRightEdge = windowWidth - x < threshold;
+      document.querySelectorAll('.scrollbar-fade').forEach(el => {
+        if (nearRightEdge) {
+          el.classList.add('show-scrollbar');
+        } else {
+          el.classList.remove('show-scrollbar');
+        }
+      });
+    }
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+}
+
 const App: React.FC = () => {
+  useProximityScrollbar();
   return (
     <AuthProvider>
       <div className="App">
@@ -100,6 +122,14 @@ const App: React.FC = () => {
                 <Layout>
                   <PracticePage />
                 </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users-debate/:roomId"
+              element={
+                <ProtectedRoute>
+                  <UsersDebatePage />
                 </ProtectedRoute>
               }
             />

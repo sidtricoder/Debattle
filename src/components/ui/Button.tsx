@@ -12,7 +12,7 @@ interface ButtonProps extends React.ComponentPropsWithoutRef<typeof motion.butto
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'bg-button-gradient text-white shadow hover:scale-105',
+  primary: 'bg-button-gradient text-white shadow',
   secondary: 'bg-secondary text-white hover:bg-secondary-light',
   accent: 'bg-accent text-white hover:bg-accent-light',
   success: 'bg-success text-white hover:bg-success-light',
@@ -32,10 +32,8 @@ const Button: React.FC<ButtonProps> = ({
   ...props
 }) => (
   <motion.button
-    whileTap={{ scale: 0.97 }}
-    whileHover={{ scale: 1.03 }}
     className={clsx(
-      'inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold text-base focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-150',
+      'inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold text-base focus:outline-none focus:ring-2 focus:ring-accent transition-colors duration-150',
       variantClasses[variant],
       loading && 'opacity-60 cursor-not-allowed',
       className

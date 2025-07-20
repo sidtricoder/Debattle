@@ -15,6 +15,18 @@ export interface Debate {
   settings: DebateSettings;
   spectators: string[];
   chatMessages: ChatMessage[];
+  // Practice mode fields
+  isPractice?: boolean;
+  practiceSettings?: {
+    aiProvider: 'gemini' | 'llama' | 'gemma';
+    timeoutSeconds: number;
+    numberOfRounds: number;
+    userStance: 'pro' | 'con';
+  };
+  aiPersonality?: string;
+  practiceTips?: string[];
+  currentRound?: number;
+  judgment?: any;
 }
 
 export interface DebateTopic {
@@ -193,4 +205,22 @@ export interface TournamentMatch {
   winner?: string;
   debateId?: string;
   scheduledTime: Date;
+}
+
+export interface DebateMessage {
+  id: string;
+  userId: string;
+  content: string;
+  role: 'pro' | 'con' | 'judge' | 'system';
+  timestamp: Date;
+  round: number;
+  isJudged?: boolean;
+  scores?: {
+    logic: number;
+    evidence: number;
+    clarity: number;
+    rebuttal: number;
+    overall: number;
+  };
+  feedback?: string;
 }
