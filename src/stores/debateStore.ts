@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { firestore } from '../lib/firebase';
+import { useAuthStore } from './authStore';
 import {
   collection,
   doc,
@@ -76,6 +77,7 @@ export interface Debate {
     fallaciesDetected: string[];
     highlights: string[];
   };
+  ratings?: Record<string, number>;
   ratingChanges?: Record<string, number>;
   metadata: {
     totalArguments: number;
@@ -207,9 +209,26 @@ export const useDebateStore = create<DebateState>((set, get) => ({
         return;
       }
       
+      // Get user's display name from Firestore if not AI
+      let displayName = `User ${userId.slice(-4)}`; // Default fallback
+      if (userId !== 'ai_opponent') {
+        try {
+          const userDoc = await getDoc(doc(firestore, 'users', userId));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            displayName = userData.displayName || userData.username || `User ${userId.slice(-4)}`;
+          }
+        } catch (error) {
+          console.warn('Failed to fetch user display name:', error);
+          displayName = `User ${userId.slice(-4)}`;
+        }
+      } else {
+        displayName = 'AI Opponent';
+      }
+      
       const participant: DebateParticipant = {
         userId,
-        displayName: userId === 'ai_opponent' ? 'AI Opponent' : `User ${userId.slice(-4)}`,
+        displayName,
         rating: 1000,
         stance,
         isOnline: true,
@@ -404,11 +423,34 @@ export const useDebateStore = create<DebateState>((set, get) => ({
       // Use startedAt if available, otherwise fall back to createdAt
       const startTime = debate.startedAt || debate.createdAt;
       
+      // Calculate rating changes if this is a user vs user debate (not practice)
+      let ratingChanges: Record<string, number> | undefined = undefined;
+      if (debate.participants.length === 2 && 
+          !debate.participants.some(p => p.userId === 'ai_opponent') &&
+          judgment?.winner) {
+        // For user vs user debates, calculate rating changes
+        // Note: This is a simplified calculation - in a real app you'd use ELO
+        ratingChanges = {} as Record<string, number>;
+        for (const participant of debate.participants) {
+          const isWinner = participant.userId === judgment.winner;
+          const isLoser = judgment.winner && participant.userId !== judgment.winner;
+          
+          if (isWinner) {
+            ratingChanges[participant.userId] = 16; // +16 for win
+          } else if (isLoser) {
+            ratingChanges[participant.userId] = -16; // -16 for loss
+          } else {
+            ratingChanges[participant.userId] = 0; // 0 for draw
+          }
+        }
+      }
+      
       const updatedDebate = {
         ...debate,
         status: 'completed' as const,
         endedAt: endTime,
         judgment,
+        ratingChanges,
         participantIds: debate.participants.map(p => p.userId),
         metadata: {
           ...debate.metadata,
@@ -418,6 +460,14 @@ export const useDebateStore = create<DebateState>((set, get) => ({
       
       console.log('[DEBUG] endDebate: updatedDebate', updatedDebate);
       await updateDoc(debateRef, updatedDebate);
+      
+      // Refresh user data to sync with Firebase
+      try {
+        const { refreshUserData } = useAuthStore.getState();
+        await refreshUserData();
+      } catch (error) {
+        console.error('Failed to refresh user data after debate end:', error);
+      }
       
       set(state => ({
         debatesHistory: state.debatesHistory.map(d => 
@@ -529,19 +579,14 @@ export const useDebateStore = create<DebateState>((set, get) => ({
   loadDebateHistory: async (userId) => {
     set({ isLoading: true, error: null });
     try {
-      const debatesQuery = query(
-        collection(firestore, 'debates'),
-        where('participantIds', 'array-contains', userId),
-        orderBy('createdAt', 'desc'),
-        limit(50)
-      );
-      
-      const debatesSnapshot = await getDocs(debatesQuery);
-      const debates = debatesSnapshot.docs.map(doc => ({
+      // Fetch all debates (limit to 100 for safety)
+      const debatesSnapshot = await getDocs(query(collection(firestore, 'debates'), orderBy('createdAt', 'desc'), limit(100)));
+      const allDebates = debatesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Debate[];
-      
+      // Filter in JS for debates where user is a participant
+      const debates = allDebates.filter(d => d.participants && d.participants.some(p => p.userId === userId));
       set({ debatesHistory: debates, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });

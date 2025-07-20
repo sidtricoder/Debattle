@@ -206,3 +206,21 @@ export interface TournamentMatch {
   debateId?: string;
   scheduledTime: Date;
 }
+
+export interface DebateMessage {
+  id: string;
+  userId: string;
+  content: string;
+  role: 'pro' | 'con' | 'judge' | 'system';
+  timestamp: Date;
+  round: number;
+  isJudged?: boolean;
+  scores?: {
+    logic: number;
+    evidence: number;
+    clarity: number;
+    rebuttal: number;
+    overall: number;
+  };
+  feedback?: string;
+}

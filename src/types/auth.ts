@@ -85,4 +85,5 @@ export interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   clearError: () => void;
+  refreshUserData: () => Promise<void>;
 }

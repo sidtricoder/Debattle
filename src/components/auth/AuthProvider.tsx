@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { AuthContextType } from '../../types/auth';
+import { cleanupOldQueueEntries } from '../../services/debate/matchmaking';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -19,12 +20,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateProfile,
     clearError,
     initializeAuth,
+    refreshUserData,
   } = useAuthStore();
 
   useEffect(() => {
     // Initialize authentication state
     initializeAuth();
-  }, [initializeAuth]);
+    
+    // Clean up old queue entries on app start
+    cleanupOldQueueEntries().catch(error => {
+      console.warn('Failed to cleanup old queue entries:', error);
+    });
+  }, []); // Remove initializeAuth from dependencies to prevent infinite loop
 
   const value: AuthContextType = {
     user,
@@ -44,6 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     },
     updateProfile,
     clearError,
+    refreshUserData,
   };
 
   return (

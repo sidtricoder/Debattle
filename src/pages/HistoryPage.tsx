@@ -40,30 +40,117 @@ const HistoryPage: React.FC = () => {
     }
   }, [user, loadDebateHistory]);
 
+  // Helper function to migrate debate timestamps if needed
+  const migrateDebateTimestamps = async (debate: any) => {
+    // This function can be used to fix existing debates with inconsistent timestamps
+    // For now, we'll just log any issues we find
+    if (debate.createdAt && typeof debate.createdAt === 'object' && debate.createdAt.toDate) {
+      console.warn('[DEBUG] Found Firestore timestamp in createdAt for debate:', debate.id);
+    }
+    if (debate.endedAt && typeof debate.endedAt === 'object' && debate.endedAt.toDate) {
+      console.warn('[DEBUG] Found Firestore timestamp in endedAt for debate:', debate.id);
+    }
+  };
+
   // Convert Firestore debates to the expected format for filtering/sorting
   const debates = debatesHistory.map(d => {
     let duration = 0;
+    
+    // Helper function to safely convert timestamp to number
+    const safeTimestamp = (timestamp: any): number => {
+      if (!timestamp) return 0;
+      
+      // Handle different timestamp formats
+      if (timestamp instanceof Date) {
+        return timestamp.getTime();
+      }
+      
+      const num = Number(timestamp);
+      if (isNaN(num)) return 0;
+      
+      // If it's a Firestore timestamp, convert it
+      if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
+        return timestamp.toDate().getTime();
+      }
+      
+      return num;
+    };
+    
+    // Helper function to calculate duration in minutes
+    const calculateDuration = (endTime: number, startTime: number): number => {
+      if (endTime <= 0 || startTime <= 0) return 0;
+      const diffMs = endTime - startTime;
+      // Handle case where timestamps might be in different formats
+      if (diffMs < 0) return 0; // Invalid duration
+      if (diffMs > 24 * 60 * 60 * 1000) return 0; // More than 24 hours, likely error
+      return Math.round(diffMs / 60000); // Convert to minutes
+    };
+    
+    // Try different duration calculation methods
     if (d.metadata?.debateDuration && !isNaN(Number(d.metadata.debateDuration))) {
-      duration = Math.round(Number(d.metadata.debateDuration) / 60000);
-    } else if (d.endedAt && d.startedAt && !isNaN(Number(d.endedAt)) && !isNaN(Number(d.startedAt))) {
-      duration = Math.round((Number(d.endedAt) - Number(d.startedAt)) / 60000);
-    } else if (d.endedAt && d.createdAt && !isNaN(Number(d.endedAt)) && !isNaN(Number(d.createdAt))) {
-      duration = Math.round((Number(d.endedAt) - Number(d.createdAt)) / 60000);
+      const debateDuration = Number(d.metadata.debateDuration);
+      duration = Math.round(debateDuration / 60000); // Convert from milliseconds to minutes
+    } else if (d.endedAt && d.startedAt) {
+      const endTime = safeTimestamp(d.endedAt);
+      const startTime = safeTimestamp(d.startedAt);
+      duration = calculateDuration(endTime, startTime);
+    } else if (d.endedAt && d.createdAt) {
+      const endTime = safeTimestamp(d.endedAt);
+      const startTime = safeTimestamp(d.createdAt);
+      duration = calculateDuration(endTime, startTime);
     }
+    
+    // Debug logging for duration calculation
+    if (duration > 1000) { // If duration is suspiciously large
+      console.warn('[DEBUG] Large duration detected:', {
+        debateId: d.id,
+        duration,
+        endedAt: d.endedAt,
+        startedAt: d.startedAt,
+        createdAt: d.createdAt,
+        metadata: d.metadata
+      });
+    }
+    
+    // Check for timestamp format issues
+    migrateDebateTimestamps(d);
+    
+    // Get opponent details with fallback for display names
+    const opponent = d.participants.find(p => p.userId !== user?.uid);
+    let opponentName = opponent?.displayName || 'AI Opponent';
+    
+    // If opponent name looks like a fallback or is missing, try to get a better name
+    if (opponent && opponent.userId !== 'ai_opponent' && 
+        (!opponentName || opponentName === 'You' || opponentName === 'Opponent' || opponentName.startsWith('User '))) {
+      // For now, use a fallback name - in a real app, you'd fetch from Firestore
+      opponentName = `User ${opponent.userId.slice(-4)}`;
+    }
+    
+    // Calculate rating change if not present
+    let ratingChange = d.ratingChanges?.[user?.uid || ''] || 0;
+    if (ratingChange === 0 && d.ratings && d.judgment?.winner) {
+      // Try to calculate rating change from stored ratings
+      const oldRating = d.ratings[user?.uid || ''];
+      const newRating = d.ratings[user?.uid || ''];
+      if (oldRating && newRating) {
+        ratingChange = newRating - oldRating;
+      }
+    }
+    
     return {
       ...d,
-      date: (d.endedAt && !isNaN(Number(d.endedAt))) ? new Date(d.endedAt) : (d.createdAt && !isNaN(Number(d.createdAt)) ? new Date(d.createdAt) : new Date()),
+      date: new Date(safeTimestamp(d.endedAt) || safeTimestamp(d.createdAt) || Date.now()),
       result: d.judgment?.winner === user?.uid ? 'win' : (d.judgment?.winner ? 'loss' : 'draw'),
       opponent: {
-        name: d.participants.find(p => p.userId !== user?.uid)?.displayName || 'AI Opponent',
-        rating: d.participants.find(p => p.userId !== user?.uid)?.rating || 1200,
+        name: opponentName,
+        rating: opponent?.rating || 1200,
         photoURL: '' // Optionally add avatar logic
       },
       duration,
-      ratingChange: d.ratingChanges?.[user?.uid || ''] || 0,
+      ratingChange,
       score: {
         user: d.judgment?.scores?.[user?.uid || ''] || 0,
-        opponent: d.judgment?.scores?.[d.participants.find(p => p.userId !== user?.uid)?.userId || ''] || 0
+        opponent: d.judgment?.scores?.[opponent?.userId || ''] || 0
       },
       category: d.category
     };
@@ -114,6 +201,14 @@ const HistoryPage: React.FC = () => {
     } catch {
       return 'N/A';
     }
+  };
+
+  const formatDuration = (minutes: number) => {
+    if (minutes <= 0) return '0m';
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
   };
 
   const getResultIcon = (result: string) => {
@@ -200,7 +295,7 @@ const HistoryPage: React.FC = () => {
           
           <div className="p-6 text-center bg-transparent">
             <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">
-              {stats.avgDuration}m
+              {formatDuration(stats.avgDuration)}
             </div>
             <div className="text-gray-600 dark:text-gray-300">Avg Duration</div>
           </div>
@@ -329,7 +424,7 @@ const HistoryPage: React.FC = () => {
                   {/* Duration */}
                   <div className="text-center px-6">
                     <div className="text-lg font-bold text-gray-900 dark:text-white">
-                      {debate.duration}m
+                      {formatDuration(debate.duration)}
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">Duration</div>
                   </div>

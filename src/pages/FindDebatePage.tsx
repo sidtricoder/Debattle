@@ -24,6 +24,7 @@ import { useAuth } from '../components/auth/AuthProvider';
 import { firestore } from '../lib/firebase';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import Footer from '../components/layout/Footer';
+import MatchmakingModal from '../components/debate/MatchmakingModal';
 
 const FindDebatePage: React.FC = () => {
   const { user } = useAuth();
@@ -33,13 +34,14 @@ const FindDebatePage: React.FC = () => {
   const [topics, setTopics] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showMatchmaking, setShowMatchmaking] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchTopics = async () => {
       try {
         const topicsQuery = query(
           collection(firestore, 'topics'),
-          orderBy('popularity', 'desc'),
+          orderBy('usageCount', 'desc'),
           limit(20)
         );
         const topicsSnapshot = await getDocs(topicsQuery);
@@ -50,31 +52,43 @@ const FindDebatePage: React.FC = () => {
         setTopics(topicsData);
       } catch (error) {
         console.error('Error fetching topics:', error);
-        // Fallback data
+        // Fallback data matching the actual Firestore schema
         setTopics([
           {
-            id: '1',
-            title: 'Should social media platforms be regulated?',
-            category: 'Technology',
-            difficulty: 7,
-            popularity: 95,
-            description: 'Debate the role of government in regulating social media content and user privacy.'
-          },
-          {
-            id: '2',
-            title: 'Is remote work better than office work?',
-            category: 'Business',
-            difficulty: 6,
-            popularity: 88,
-            description: 'Compare the benefits and drawbacks of remote work versus traditional office environments.'
-          },
-          {
-            id: '3',
-            title: 'Should college education be free?',
-            category: 'Education',
+            id: 'topic1',
+            title: 'Should artificial intelligence replace human judges in courts?',
+            category: 'technology',
             difficulty: 8,
-            popularity: 92,
-            description: 'Discuss the feasibility and implications of making higher education accessible to all.'
+            usageCount: 8,
+            averageRating: 4.2,
+            description: 'Debate whether AI systems should be used to make judicial decisions in legal proceedings.',
+            isOfficial: true,
+            trending: true,
+            tags: ['AI', 'justice', 'ethics', 'law']
+          },
+          {
+            id: 'topic2',
+            title: 'Is remote work better than office work?',
+            category: 'business',
+            difficulty: 6,
+            usageCount: 12,
+            averageRating: 4.0,
+            description: 'Discuss the benefits and drawbacks of remote work versus traditional office environments.',
+            isOfficial: true,
+            trending: true,
+            tags: ['work', 'productivity', 'lifestyle', 'business']
+          },
+          {
+            id: 'topic3',
+            title: 'Should universities be free for everyone?',
+            category: 'education',
+            difficulty: 7,
+            usageCount: 15,
+            averageRating: 4.5,
+            description: 'Debate whether higher education should be publicly funded and accessible to all.',
+            isOfficial: true,
+            trending: false,
+            tags: ['education', 'economics', 'society', 'policy']
           }
         ]);
       } finally {
@@ -268,7 +282,7 @@ const FindDebatePage: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-1 text-yellow-500">
                         <Star className="w-4 h-4 fill-current" />
-                        <span className="text-sm font-medium">{topic.popularity}%</span>
+                        <span className="text-sm font-medium">{topic.usageCount || 0}</span>
                       </div>
                     </div>
                     {/* Title */}
@@ -287,7 +301,10 @@ const FindDebatePage: React.FC = () => {
                     {/* Actions */}
                     <div className="flex gap-3">
                       <button
-                        onClick={() => setShowMatchmaking(true)}
+                        onClick={() => {
+                          setSelectedTopic(topic);
+                          setShowMatchmaking(true);
+                        }}
                         className="flex-1 bg-gradient-to-b from-blue-500 to-indigo-600 text-white py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2"
                       >
                         <Zap className="w-4 h-4" />
@@ -331,60 +348,17 @@ const FindDebatePage: React.FC = () => {
       </div>
 
       {/* Matchmaking Modal */}
-      <AnimatePresence>
-        {showMatchmaking && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gradient-to-b from-white via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-blue-950 dark:to-indigo-950 rounded-3xl p-8 max-w-md w-full shadow-2xl"
-            >
-              <div className="text-center">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="w-16 h-16 bg-gradient-to-b from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl"
-                >
-                  <Zap className="w-8 h-8 text-white" />
-                </motion.div>
-                <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">
-                  Finding Your Opponent...
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300 mb-6">
-                  Searching for the perfect debate partner. This usually takes 10-30 seconds.
-                </p>
-                <div className="flex items-center justify-center gap-2 mb-6">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
-                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
-                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowMatchmaking(false)}
-                    className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 py-3 px-4 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="flex-1 bg-gradient-to-b from-yellow-400 to-orange-500 text-white py-3 px-4 rounded-xl font-semibold hover:from-yellow-500 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl"
-                  >
-                    <Link to="/practice" className="flex items-center justify-center gap-2">
-                      <Sparkles className="w-4 h-4" />
-                      Practice Mode
-                    </Link>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <MatchmakingModal
+        open={showMatchmaking}
+        onClose={() => {
+          setShowMatchmaking(false);
+          setSelectedTopic(null);
+        }}
+        topicId={selectedTopic?.id || ''}
+        topicTitle={selectedTopic?.title || ''}
+        userId={user?.uid || ''}
+        userRating={user?.rating || 1000}
+      />
       <Footer />
     </div>
   );

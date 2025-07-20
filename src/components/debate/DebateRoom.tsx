@@ -51,7 +51,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
   const [searchParams] = useSearchParams();
   const isPracticeMode = searchParams.get('mode') === 'practice';
   
-  const { user: currentUser } = useAuthStore();
+  const { user: currentUser, refreshUserData } = useAuthStore();
   const {
     currentDebate,
     isLoading,
@@ -1283,7 +1283,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
             open={showJudgment}
             onClose={() => setShowJudgment(false)}
           >
-            <div className="p-6 max-h-[80vh] overflow-y-auto">
+            <div className="p-6 max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
               {currentDebate.judgment && (() => {
                 const judgment = currentDebate.judgment as typeof currentDebate.judgment & { learningPoints?: string[] };
                 // Winner: try userId, then displayName
@@ -1314,10 +1314,10 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
                   <div className="space-y-6">
                     {/* Winner */}
                     <div className="text-center">
-                      <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                         🏆 Winner: {winnerName}
                       </h3>
-                      <p className="text-gray-600">{judgment.reasoning}</p>
+                      <p className="text-gray-700 dark:text-gray-300">{judgment.reasoning}</p>
                     </div>
 
                     {/* Scores */}
@@ -1325,15 +1325,28 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
                       {currentDebate.participants.map((participant) => {
                         const score = getScore(participant.userId) ?? getScore(participant.displayName);
                         const feedbackArr = getFeedback(participant.userId);
+                        const ratingChange = currentDebate.ratingChanges?.[participant.userId] || 0;
+                        const isCurrentUser = participant.userId === currentUser?.uid;
                         return (
-                          <div key={participant.userId} className="p-4 border rounded-lg">
-                            <h4 className="font-semibold mb-2">{participant.displayName}</h4>
-                            <div className="text-2xl font-bold text-blue-600 mb-2">
+                          <div key={participant.userId} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+                            <h4 className="font-semibold mb-2 text-gray-900 dark:text-white flex items-center justify-between">
+                              <span>{participant.displayName}</span>
+                              {isCurrentUser && (
+                                <div className={`text-sm font-medium px-2 py-1 rounded ${
+                                  ratingChange > 0 ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' : 
+                                  ratingChange < 0 ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300' : 
+                                  'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                                }`}>
+                                  {ratingChange > 0 ? '+' : ''}{ratingChange} ELO
+                                </div>
+                              )}
+                            </h4>
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
                               {typeof score === 'number' ? `${score.toFixed(1)}/10` : 'No score returned by judge'}
                             </div>
                             <div className="space-y-1">
                               {feedbackArr.length > 0 ? feedbackArr.map((feedback, index) => (
-                                <p key={index} className="text-sm text-gray-600">• {feedback}</p>
+                                <p key={index} className="text-sm text-gray-600 dark:text-gray-300">• {feedback}</p>
                               )) : <p className="text-sm text-gray-400">No feedback</p>}
                             </div>
                           </div>
@@ -1343,25 +1356,25 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
 
                     {/* Highlights */}
                     <div>
-                      <h4 className="font-semibold mb-2">Debate Highlights</h4>
+                      <h4 className="font-semibold mb-2 text-gray-900 dark:text-white">Debate Highlights</h4>
                       <ul className="space-y-1">
                         {judgment.highlights?.map((highlight, index) => (
-                          <li key={index} className="text-sm text-gray-600">• {highlight}</li>
+                          <li key={index} className="text-sm text-gray-600 dark:text-gray-300">• {highlight}</li>
                         ))}
                       </ul>
                     </div>
 
                     {/* Learning Points */}
                     <div>
-                      <h4 className="font-semibold mb-2">Learning Points</h4>
+                      <h4 className="font-semibold mb-2 text-gray-900 dark:text-white">Learning Points</h4>
                       <ul className="space-y-1">
                         {Array.isArray((judgment as any).learningPoints) && (judgment as any).learningPoints.length > 0 ? (judgment as any).learningPoints.map((point: string, idx: number) => (
-                          <li key={idx} className="text-sm text-gray-600">• {point}</li>
+                          <li key={idx} className="text-sm text-gray-600 dark:text-gray-300">• {point}</li>
                         )) : (
                           <>
-                            <li className="text-sm text-gray-600">• Continue practicing debate skills</li>
-                            <li className="text-sm text-gray-600">• Focus on evidence and logical structure</li>
-                            <li className="text-sm text-gray-600">• Improve rebuttal techniques</li>
+                            <li className="text-sm text-gray-600 dark:text-gray-300">• Continue practicing debate skills</li>
+                            <li className="text-sm text-gray-600 dark:text-gray-300">• Focus on evidence and logical structure</li>
+                            <li className="text-sm text-gray-600 dark:text-gray-300">• Improve rebuttal techniques</li>
                           </>
                         )}
                       </ul>
@@ -1371,13 +1384,13 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
                       <Button
                         variant="outline"
                         onClick={() => navigate('/find-debate')}
-                        className="flex-1"
+                        className="flex-1 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         Find New Debate
                       </Button>
                       <Button
                         onClick={() => setShowJudgment(false)}
-                        className="flex-1"
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                       >
                         Close
                       </Button>
@@ -1408,36 +1421,51 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
           {/* Judgment Result Modal */}
           {showJudgmentModal && judgmentResult && (
             <Modal open={showJudgmentModal} onClose={() => setShowJudgmentModal(false)}>
-              <div className="p-6 max-h-[80vh] overflow-y-auto">
-                <h3 className="text-lg font-semibold mb-4">AI Debate Result</h3>
-                <div className="mb-2"><strong>Winner:</strong> {currentDebate?.participants.find(p => p.userId === judgmentResult.winner)?.displayName || 'N/A'}</div>
-                <div className="mb-2"><strong>Reasoning:</strong> {judgmentResult.reasoning}</div>
-                <div className="mb-2"><strong>Scores:</strong></div>
-                <ul className="mb-2">
+              <div className="p-6 max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+                <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">AI Debate Result</h3>
+                <div className="mb-2 text-gray-700 dark:text-gray-300"><strong className="text-gray-900 dark:text-white">Winner:</strong> {currentDebate?.participants.find(p => p.userId === judgmentResult.winner)?.displayName || 'N/A'}</div>
+                <div className="mb-2 text-gray-700 dark:text-gray-300"><strong className="text-gray-900 dark:text-white">Reasoning:</strong> {judgmentResult.reasoning}</div>
+                <div className="mb-2 text-gray-700 dark:text-gray-300"><strong className="text-gray-900 dark:text-white">Scores:</strong></div>
+                <ul className="mb-2 text-gray-700 dark:text-gray-300">
                   {judgmentResult.scores && typeof judgmentResult.scores === 'object' &&
-                    (Object.entries(judgmentResult.scores) as [string, number][]).map(([uid, score], idx) => (
-                      <li key={uid || idx}>
-                        {currentDebate?.participants.find(p => p.userId === uid)?.displayName || uid}: {typeof score === 'number' && !isNaN(score) && score !== undefined ? `${score}/10` : 'N/A'}
-                      </li>
-                    ))}
+                    (Object.entries(judgmentResult.scores) as [string, number][]).map(([uid, score], idx) => {
+                      const ratingChange = currentDebate?.ratingChanges?.[uid] || 0;
+                      const isCurrentUser = uid === currentUser?.uid;
+                      return (
+                        <li key={uid || idx} className="flex items-center justify-between">
+                          <span>
+                            {currentDebate?.participants.find(p => p.userId === uid)?.displayName || uid}: {typeof score === 'number' && !isNaN(score) && score !== undefined ? `${score}/10` : 'N/A'}
+                          </span>
+                          {isCurrentUser && (
+                            <span className={`text-sm font-medium px-2 py-1 rounded ${
+                              ratingChange > 0 ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' : 
+                              ratingChange < 0 ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300' : 
+                              'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                            }`}>
+                              {ratingChange > 0 ? '+' : ''}{ratingChange} ELO
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
                 </ul>
-                <div className="mb-2"><strong>Areas to Improve:</strong></div>
-                <ul>
+                <div className="mb-2 text-gray-700 dark:text-gray-300"><strong className="text-gray-900 dark:text-white">Areas to Improve:</strong></div>
+                <ul className="text-gray-700 dark:text-gray-300">
                   {judgmentResult.learningPoints?.map((point: string, idx: number) => (
                     <li key={idx}>• {point}</li>
                   ))}
                 </ul>
                 {judgmentResult.highlights && judgmentResult.highlights.length > 0 && (
                   <>
-                    <div className="mt-4 mb-2 font-semibold">Debate Highlights</div>
-                    <ul>
+                    <div className="mt-4 mb-2 font-semibold text-gray-900 dark:text-white">Debate Highlights</div>
+                    <ul className="text-gray-700 dark:text-gray-300">
                       {judgmentResult.highlights.map((highlight: string, idx: number) => (
                         <li key={idx}>• {highlight}</li>
                       ))}
                     </ul>
                   </>
                 )}
-                <Button onClick={() => setShowJudgmentModal(false)} className="mt-4">Close</Button>
+                <Button onClick={() => setShowJudgmentModal(false)} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">Close</Button>
               </div>
             </Modal>
           )}

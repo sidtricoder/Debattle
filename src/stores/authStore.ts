@@ -14,6 +14,7 @@ interface AuthStore extends AuthState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   initializeAuth: () => void;
+  refreshUserData: () => Promise<void>;
 }
 
 // Helper function to convert Firestore data to User type
@@ -185,6 +186,23 @@ export const useAuthStore = create<AuthStore>()(
       setUser: (user: User | null) => set({ user, isAuthenticated: !!user }),
       setLoading: (loading: boolean) => set({ loading }),
       setError: (error: string | null) => set({ error }),
+
+      refreshUserData: async () => {
+        const { user } = get();
+        if (!user?.uid) return;
+        
+        try {
+          // Don't set loading to true if we're already loading
+          const currentState = get();
+          if (!currentState.loading) {
+            set({ loading: true });
+          }
+          await fetchUserFromFirestore(user.uid, set);
+        } catch (error: any) {
+          console.error('Error refreshing user data:', error);
+          set({ error: error.message || 'Failed to refresh user data', loading: false });
+        }
+      },
 
       initializeAuth: () => {
         set({ loading: true });

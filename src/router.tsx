@@ -1,6 +1,7 @@
 import React, { lazy } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import UsersDebatePage from '@/pages/UsersDebatePage';
 
 const HomePage = lazy(() => import('@/pages/LandingPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
@@ -16,6 +17,16 @@ const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },
   { path: '/dashboard', element: <ProtectedRoute><DashboardPage /></ProtectedRoute> },
   { path: '/debate/:debateId', element: <ProtectedRoute><DebatePage /></ProtectedRoute> },
+  { 
+    path: '/users-debate/:roomId', 
+    element: <ProtectedRoute>
+      <div style={{ padding: '20px', color: 'white', background: 'black' }}>
+        <h1>UsersDebatePage Test</h1>
+        <p>Route is working!</p>
+        <UsersDebatePage />
+      </div>
+    </ProtectedRoute> 
+  },
   { path: '/debate/new', element: <ProtectedRoute><NewDebatePage /></ProtectedRoute> },
   { path: '/find-debate', element: <ProtectedRoute><NewDebatePage /></ProtectedRoute> },
   { path: '/leaderboard', element: <ProtectedRoute><LeaderboardPage /></ProtectedRoute> },

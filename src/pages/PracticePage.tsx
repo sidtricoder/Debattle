@@ -179,7 +179,7 @@ const PracticePage: React.FC = () => {
         // Add both user and AI to participants and participantIds
         const userParticipant = {
           userId: user.uid,
-          displayName: user.displayName || 'You',
+          displayName: user.displayName || `User ${user.uid.slice(-4)}`,
           rating: 1200,
           stance: settings.userStance,
           isOnline: true,

@@ -13,6 +13,7 @@ import ProfilePage from './pages/ProfilePage';
 import PracticePage from './pages/PracticePage';
 import NotFoundPage from './pages/NotFoundPage';
 import LandingPage from './pages/LandingPage';
+import UsersDebatePage from './pages/UsersDebatePage';
 import './index.css';
 
 function useProximityScrollbar() {
@@ -121,6 +122,14 @@ const App: React.FC = () => {
                 <Layout>
                   <PracticePage />
                 </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users-debate/:roomId"
+              element={
+                <ProtectedRoute>
+                  <UsersDebatePage />
                 </ProtectedRoute>
               }
             />
