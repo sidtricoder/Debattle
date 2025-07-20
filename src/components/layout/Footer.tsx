@@ -165,12 +165,23 @@ const Footer: React.FC = () => {
             <ul className="space-y-2">
               {footerLinks.support.map((link) => (
                 <li key={link.name}>
-                  <Link
-                    to={link.href}
-                    className="text-secondary dark:text-gray-300 hover:text-primary dark:hover:text-white transition-colors text-sm"
-                  >
-                    {link.name}
-                  </Link>
+                  {link.name === 'Report Bug' ? (
+                    <a
+                      href="https://docs.google.com/forms/d/e/1FAIpQLSfnfUe38VIZvwHVxPwOOWU0YcYJE7RW8-PQHCgcmLjlw9T35Q/viewform?usp=header"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-secondary dark:text-gray-300 hover:text-primary dark:hover:text-white transition-colors text-sm"
+                    >
+                      {link.name}
+                    </a>
+                  ) : (
+                    <Link
+                      to={link.href}
+                      className="text-secondary dark:text-gray-300 hover:text-primary dark:hover:text-white transition-colors text-sm"
+                    >
+                      {link.name}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
