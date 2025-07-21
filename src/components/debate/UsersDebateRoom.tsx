@@ -203,7 +203,10 @@ export const UsersDebateRoom: React.FC = () => {
   // Scroll to bottom on new message
   useEffect(() => {
     if (debateContainerRef.current) {
-      debateContainerRef.current.scrollTop = debateContainerRef.current.scrollHeight;
+      debateContainerRef.current.scrollTo({
+        top: debateContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
     }
   }, [debate?.arguments]);
 

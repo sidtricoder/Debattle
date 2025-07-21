@@ -38,8 +38,8 @@ const Header: React.FC = () => {
         { name: 'Leaderboard', href: '/leaderboard', icon: Trophy }
       ]
     : [
-        { name: 'Features', href: '#features', icon: Sparkles },
-        { name: 'About', href: '#about', icon: Home },
+        { name: 'Features', href: '/features', icon: Sparkles },
+        { name: 'About', href: '/about', icon: Home },
       ];
 
   // Handle click outside to close user menu

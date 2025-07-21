@@ -14,6 +14,12 @@ import PracticePage from './pages/PracticePage';
 import NotFoundPage from './pages/NotFoundPage';
 import LandingPage from './pages/LandingPage';
 import UsersDebatePage from './pages/UsersDebatePage';
+import AboutPage from './pages/AboutPage';
+import FeaturesPage from './pages/FeaturesPage';
+import DonatePage from './pages/DonatePage';
+import ContactPage from './pages/ContactPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import './index.css';
 
 function useProximityScrollbar() {
@@ -42,10 +48,15 @@ const App: React.FC = () => {
     <AuthProvider>
       <div className="App">
           <Routes>
-          {/* Landing page - no layout wrapper */}
+          {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/features" element={<FeaturesPage />} />
+            <Route path="/donate" element={<DonatePage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
           
-
           {/* Protected routes with layout */}
             <Route
               path="/dashboard"

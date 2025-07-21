@@ -148,7 +148,7 @@ export const useDebateStore = create<DebateState>((set, get) => ({
         timeRemaining: 3600,
         maxRounds: 6,
         currentRound: 1,
-        createdAt: serverTimestamp(),
+        createdAt: Date.now(), // always use integer timestamp
         metadata: {
           totalArguments: 0,
           debateDuration: 0
@@ -169,7 +169,7 @@ export const useDebateStore = create<DebateState>((set, get) => ({
         timeRemaining: 3600,
         maxRounds: 6,
         currentRound: 1,
-        createdAt: Date.now(),
+        createdAt: debateData.createdAt,
         metadata: {
           totalArguments: 0,
           debateDuration: 0
@@ -181,7 +181,6 @@ export const useDebateStore = create<DebateState>((set, get) => ({
       
       set(state => ({
         debatesHistory: [...state.debatesHistory, newDebate],
-        isLoading: false
       }));
       
       return debateRef.id;

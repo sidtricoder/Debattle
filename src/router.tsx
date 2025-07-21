@@ -12,6 +12,7 @@ const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const PracticePage = lazy(() => import('@/pages/PracticePage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
+const AboutPage = lazy(() => import('@/pages/AboutPage'));
 
 const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
   { path: '/profile/:userId?', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
   { path: '/history', element: <ProtectedRoute><HistoryPage /></ProtectedRoute> },
   { path: '/practice', element: <ProtectedRoute><PracticePage /></ProtectedRoute> },
+  { path: '/about', element: <AboutPage /> },
   { path: '*', element: <NotFoundPage /> },
 ]);
 

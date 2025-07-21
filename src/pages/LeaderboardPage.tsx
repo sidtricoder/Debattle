@@ -30,7 +30,7 @@ const LeaderboardPage: React.FC = () => {
     const fetchLeaderboard = async () => {
       const usersQuery = query(collection(firestore, 'users'), orderBy('rating', 'desc'));
       const snapshot = await getDocs(usersQuery);
-      const users = snapshot.docs.map(doc => {
+      const users = snapshot.docs.map((doc, idx) => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -43,6 +43,7 @@ const LeaderboardPage: React.FC = () => {
           winRate: data.win_rate,
           winStreak: data.winStreak,
           level: data.level,
+          rank: idx + 1, // Assign rank based on sorted order
         };
       });
       setLeaderboard(users);
@@ -93,6 +94,11 @@ const LeaderboardPage: React.FC = () => {
   };
 
   const userRank = leaderboard.find(player => player.id === user?.uid);
+
+  // Calculate stats from leaderboard data
+  const totalPlayers = leaderboard.length;
+  const activeToday = leaderboard.filter(player => player.gamesPlayed > 0).length; // Example: players with games played > 0
+  const avgRating = leaderboard.length > 0 ? Math.round(leaderboard.reduce((sum, p) => sum + (p.rating || 0), 0) / leaderboard.length) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
@@ -298,7 +304,7 @@ const LeaderboardPage: React.FC = () => {
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                 Total Players
               </h3>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">12,847</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalPlayers}</p>
             </div>
 
             <div className="text-center flex flex-col items-center justify-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 bg-transparent shadow-none">
@@ -308,7 +314,7 @@ const LeaderboardPage: React.FC = () => {
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                 Active Today
               </h3>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">1,247</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{activeToday}</p>
             </div>
 
             <div className="text-center flex flex-col items-center justify-center bg-transparent shadow-none">
@@ -318,7 +324,7 @@ const LeaderboardPage: React.FC = () => {
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                 Avg. Rating
               </h3>
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">1,245</p>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{avgRating}</p>
             </div>
           </motion.div>
         </div>

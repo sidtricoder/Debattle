@@ -55,49 +55,72 @@ const HistoryPage: React.FC = () => {
   // Convert Firestore debates to the expected format for filtering/sorting
   const debates = debatesHistory.map(d => {
     let duration = 0;
+    let rawDiff = 0;
     
     // Helper function to safely convert timestamp to number
-    const safeTimestamp = (timestamp: any): number => {
+    const safeTimestamp = (timestamp: any, isCreatedAt?: boolean): number => {
       if (!timestamp) return 0;
-      
-      // Handle different timestamp formats
+      // If createdAt is a string or Firestore Timestamp, parse as date
+      if (isCreatedAt) {
+        if (typeof timestamp === 'string') {
+          const parsed = Date.parse(timestamp);
+          return isNaN(parsed) ? 0 : parsed;
+        }
+        if (timestamp instanceof Date) {
+          return timestamp.getTime();
+        }
+        if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
+          return timestamp.toDate().getTime();
+        }
+      }
+      // If number, use as-is
+      if (typeof timestamp === 'number') {
+        return timestamp;
+      }
+      // Fallbacks
       if (timestamp instanceof Date) {
         return timestamp.getTime();
       }
-      
-      const num = Number(timestamp);
-      if (isNaN(num)) return 0;
-      
-      // If it's a Firestore timestamp, convert it
+      if (typeof timestamp === 'string') {
+        const parsed = Date.parse(timestamp);
+        return isNaN(parsed) ? 0 : parsed;
+      }
       if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
         return timestamp.toDate().getTime();
       }
-      
-      return num;
+      const num = Number(timestamp);
+      return isNaN(num) ? 0 : num;
     };
-    
     // Helper function to calculate duration in minutes
     const calculateDuration = (endTime: number, startTime: number): number => {
       if (endTime <= 0 || startTime <= 0) return 0;
       const diffMs = endTime - startTime;
-      // Handle case where timestamps might be in different formats
-      if (diffMs < 0) return 0; // Invalid duration
-      if (diffMs > 24 * 60 * 60 * 1000) return 0; // More than 24 hours, likely error
-      return Math.round(diffMs / 60000); // Convert to minutes
+      if (diffMs < 0) return 0;
+      if (diffMs > 24 * 60 * 60 * 1000) return 0;
+      return Math.round(diffMs / 60000);
     };
-    
     // Try different duration calculation methods
     if (d.metadata?.debateDuration && !isNaN(Number(d.metadata.debateDuration))) {
       const debateDuration = Number(d.metadata.debateDuration);
-      duration = Math.round(debateDuration / 60000); // Convert from milliseconds to minutes
+      duration = Math.round(debateDuration / 60000);
     } else if (d.endedAt && d.startedAt) {
-      const endTime = safeTimestamp(d.endedAt);
-      const startTime = safeTimestamp(d.startedAt);
-      duration = calculateDuration(endTime, startTime);
+      // Dynamically check type of startedAt
+      const endTime = safeTimestamp(d.endedAt, false);
+      const startTimeStarted = safeTimestamp(
+        d.startedAt,
+        typeof d.startedAt === 'string' ||
+          (typeof d.startedAt === 'object' && d.startedAt !== null && 'toDate' in d.startedAt)
+      );
+      duration = calculateDuration(endTime, startTimeStarted);
     } else if (d.endedAt && d.createdAt) {
-      const endTime = safeTimestamp(d.endedAt);
-      const startTime = safeTimestamp(d.createdAt);
-      duration = calculateDuration(endTime, startTime);
+      // Dynamically check type of createdAt
+      const endTime = safeTimestamp(d.endedAt, false);
+      const startTimeCreated = safeTimestamp(
+        d.createdAt,
+        typeof d.createdAt === 'string' ||
+          (typeof d.createdAt === 'object' && d.createdAt !== null && 'toDate' in d.createdAt)
+      );
+      duration = calculateDuration(endTime, startTimeCreated);
     }
     
     // Debug logging for duration calculation
@@ -137,16 +160,23 @@ const HistoryPage: React.FC = () => {
       }
     }
     
+    let safeCreatedAt = safeTimestamp(d.createdAt, typeof d.createdAt === 'string' || (typeof d.createdAt === 'object' && d.createdAt !== null && 'toDate' in d.createdAt));
+    let safeEndedAt = safeTimestamp(d.endedAt, false);
+    if (safeCreatedAt && safeEndedAt) {
+      rawDiff = safeEndedAt - safeCreatedAt;
+    }
+    
     return {
       ...d,
-      date: new Date(safeTimestamp(d.endedAt) || safeTimestamp(d.createdAt) || Date.now()),
+      date: new Date(safeEndedAt || safeCreatedAt || Date.now()),
       result: d.judgment?.winner === user?.uid ? 'win' : (d.judgment?.winner ? 'loss' : 'draw'),
       opponent: {
         name: opponentName,
         rating: opponent?.rating || 1200,
-        photoURL: '' // Optionally add avatar logic
+        photoURL: ''
       },
       duration,
+      rawDiff, // add rawDiff to the returned object
       ratingChange,
       score: {
         user: d.judgment?.scores?.[user?.uid || ''] || 0,
@@ -186,7 +216,7 @@ const HistoryPage: React.FC = () => {
     draws: debates.filter(d => d.result === 'draw').length,
     winRate: debates.length ? Math.round((debates.filter(d => d.result === 'win').length / debates.length) * 100) : 0,
     totalRatingChange: debates.reduce((sum, d) => sum + d.ratingChange, 0),
-    avgDuration: debates.length ? Math.round(debates.reduce((sum, d) => sum + d.duration, 0) / debates.length) : 0
+    avgDurationMs: debates.length ? Math.round(debates.reduce((sum, d) => sum + (d.rawDiff || 0), 0) / debates.length) : 0
   };
 
   const formatDate = (date: Date) => {
@@ -236,6 +266,18 @@ const HistoryPage: React.FC = () => {
         return 'text-gray-600 dark:text-gray-400';
     }
   };
+
+  // Helper to format ms to minutes and seconds
+  function formatMsToMinSec(ms: number) {
+    if (!ms || ms < 0) return '0m';
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes > 0) {
+      return `${minutes}m${seconds > 0 ? ' ' + seconds + 's' : ''}`;
+    }
+    return `${seconds}s`;
+  }
 
   // Replace all mockHistory references with debates
   // Show loading state
@@ -295,7 +337,7 @@ const HistoryPage: React.FC = () => {
           
           <div className="p-6 text-center bg-transparent">
             <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">
-              {formatDuration(stats.avgDuration)}
+              {formatMsToMinSec(stats.avgDurationMs)}
             </div>
             <div className="text-gray-600 dark:text-gray-300">Avg Duration</div>
           </div>
@@ -424,7 +466,7 @@ const HistoryPage: React.FC = () => {
                   {/* Duration */}
                   <div className="text-center px-6">
                     <div className="text-lg font-bold text-gray-900 dark:text-white">
-                      {formatDuration(debate.duration)}
+                      {formatMsToMinSec(debate.rawDiff)}
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">Duration</div>
                   </div>
