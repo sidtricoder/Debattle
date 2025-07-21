@@ -1012,34 +1012,16 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
                 {/* Merge backend and pending arguments, filter out duplicates */}
                 {chatArguments.map((arg, idx, arr) => {
                   const participant = currentDebate.participants.find(p => p.userId === arg.userId) || myParticipant;
-                  const isPro = participant?.stance === 'pro';
-                  const isCon = participant?.stance === 'con';
                   const isMine = arg.userId === currentUser?.uid;
-                  
-                  // Stance toggle logic: if user chose con stance, swap sides and images
-                  const userStance = practiceSettings?.userStance || 'pro';
-                  const shouldSwapSides = userStance === 'con';
-                  
-                  // Avatar image with stance toggle support
+                  // Always align current user's arguments to the right, others to the left
+                  const alignment = isMine ? 'justify-end' : 'justify-start';
+                  const bubbleAlign = isMine ? 'flex-row-reverse' : 'flex-row';
+                  // Avatar: current user always gets right avatar, others get left avatar based on stance
                   let avatarSrc;
-                  if (shouldSwapSides) {
-                    // If user chose con stance, swap the images
-                    avatarSrc = isPro ? '/pro-left.png' : '/con-right.png';
+                  if (isMine) {
+                    avatarSrc = participant?.stance === 'pro' ? '/pro-right.png' : '/con-right.png';
                   } else {
-                    // Default: pro on right, con on left
-                    avatarSrc = isPro ? '/pro-right.png' : '/con-left.png';
-                  }
-                  
-                  // Alignment with stance toggle support
-                  let alignment, bubbleAlign;
-                  if (shouldSwapSides) {
-                    // If user chose con stance, swap sides: pro on left, con on right
-                    alignment = isPro ? 'justify-start' : 'justify-end';
-                    bubbleAlign = isPro ? 'flex-row' : 'flex-row-reverse';
-                  } else {
-                    // Default: con on left, pro on right
-                    alignment = isCon ? 'justify-start' : 'justify-end';
-                    bubbleAlign = isCon ? 'flex-row' : 'flex-row-reverse';
+                    avatarSrc = participant?.stance === 'pro' ? '/pro-left.png' : '/con-left.png';
                   }
                   return (
                     <div
@@ -1050,23 +1032,29 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
                         {/* Even Larger Avatar */}
                         <img
                           src={avatarSrc}
-                          alt={isPro ? 'Pro' : 'Con'}
+                          alt={participant?.displayName}
                           className="w-40 h-52 object-contain rounded-3xl border-2 border-gray-700 bg-black shadow-md"
                           style={{minWidth: 160, minHeight: 208}}
                         />
                         {/* Bubble */}
                         <div
                           className={`rounded-2xl px-5 py-3 shadow-lg text-base whitespace-pre-line break-words
-                            ${isPro ? 'bg-[#1a1a1a] text-green-200 border-r-4 border-green-500' : 'bg-[#181a22] text-red-200 border-l-4 border-red-500'}
+                            ${isMine
+                              ? (participant?.stance === 'pro'
+                                  ? 'bg-[#1a1a1a] text-green-200 border-r-4 border-green-500'
+                                  : 'bg-[#181a22] text-red-200 border-l-4 border-red-500')
+                              : (participant?.stance === 'pro'
+                                  ? 'bg-[#1a1a1a] text-green-200 border-r-4 border-green-500'
+                                  : 'bg-[#181a22] text-red-200 border-l-4 border-red-500')
+                            }
                           `}
                           style={{minWidth: '0', flex: 1}}
                         >
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-bold text-sm">
                               {participant?.displayName}
-                              {isMine && ' (You)'}
                             </span>
-                            <Badge variant={isPro ? 'success' : 'error'} className="text-xs">
+                            <Badge variant={participant?.stance === 'pro' ? 'success' : 'error'} className="text-xs">
                               {participant?.stance?.toUpperCase()}
                             </Badge>
                             <span className="text-xs text-gray-400">Round {arg.round}</span>

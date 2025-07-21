@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Drop - Immersive 3D Website</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <style>
+        /* Custom font faces with local paths */
+        @font-face {
+            src: url("assets/fonts/kantumruypro-regular.ttf");
+            font-family: kantumruypro-regular;
+        }
+        @font-face {
+            src: url("assets/fonts/kantumruypro-italic.ttf");
+            font-family: kantumruypro-italic;
+        }
+        @font-face {
+            src: url("assets/fonts/kantumruypro-lightitalic.ttf");
+            font-family: kantumruypro-lightitalic;
+        }
+        @font-face {
+            src: url("assets/fonts/kantumruypro-light.ttf");
+            font-family: kantumruypro-light;
+        }
+        @font-face {
+            src: url("assets/fonts/cotford-display-light-italic.ttf");
+            font-family: cotford-display-light-italic;
+        }
+        
+        /* Additional styles for static version */
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow-x: hidden;
+            font-family: 'kantumruypro-regular', sans-serif;
+        }
+        
+        .hero-section {
+            height: 100vh;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #000 0%, #111 50%, #000 100%);
+        }
+        
+        .hero-content {
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .hero-title {
+            font-size: 4.5vw;
+            color: white;
+            font-family: 'kantumruypro-regular', sans-serif;
+            letter-spacing: -1.2px;
+            margin-bottom: 20px;
+            line-height: 4vw;
+        }
+        
+        .hero-subtitle {
+            font-size: 4.8vw;
+            color: white;
+            font-family: 'cotford-display-light-italic', serif;
+            letter-spacing: -1.5px;
+            line-height: 5vw;
+        }
+        
+        .floating-elements {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .floating-sphere {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #333, #000);
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .sphere-1 {
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+        
+        .sphere-2 {
+            top: 60%;
+            right: 15%;
+            animation-delay: 2s;
+        }
+        
+        .sphere-3 {
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            animation-delay: 4s;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .content-section {
+            padding: 100px 6vw;
+            position: relative;
+        }
+        
+        .content-block {
+            margin-bottom: 100px;
+        }
+        
+        .content-title {
+            font-size: 40px;
+            color: white;
+            font-family: 'cotford-display-light-italic', serif;
+            letter-spacing: -1.5px;
+            line-height: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .content-text {
+            font-size: 18px;
+            color: white;
+            font-family: 'kantumruypro-light', sans-serif;
+            max-width: 400px;
+            padding-left: 32px;
+        }
+        
+        .menu-button {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 999px;
+            padding: 5px 10px;
+            background: transparent;
+            color: white;
+            font-family: 'kantumruypro-regular', sans-serif;
+            font-size: 16px;
+            letter-spacing: -1.2px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .scroll-indicator {
+            position: fixed;
+            bottom: 24px;
+            right: 16px;
+            color: white;
+            font-family: 'kantumruypro-regular', sans-serif;
+            font-size: 16px;
+            letter-spacing: -1.2px;
+        }
+        
+        .bottom-text {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            color: white;
+            font-family: 'kantumruypro-light', sans-serif;
+            font-size: 6vw;
+            line-height: 6vw;
+            max-width: 1000px;
+        }
+        
+        .bottom-text .italic {
+            font-family: 'cotford-display-light-italic', serif;
+            font-size: 6.5vw;
+        }
+        
+        @media (max-width: 992px) {
+            .hero-title {
+                font-size: 40px;
+                line-height: 24px;
+            }
+            
+            .hero-subtitle {
+                font-size: 44px;
+                line-height: 24px;
+            }
+            
+            .content-title {
+                font-size: 32px;
+            }
+            
+            .content-text {
+                font-size: 16px;
+                padding-left: 16px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .hero-title {
+                font-size: 40px;
+                text-align: center;
+                line-height: 40px;
+            }
+            
+            .hero-subtitle {
+                font-size: 43px;
+                text-align: center;
+                line-height: 40px;
+            }
+            
+            .content-section {
+                padding: 50px 16px;
+            }
+            
+            .content-title {
+                font-size: 28px;
+            }
+            
+            .content-text {
+                font-size: 16px;
+                padding-left: 0;
+            }
+            
+            .bottom-text {
+                font-size: 30px;
+                line-height: 36px;
+                left: 16px;
+                bottom: 32px;
+            }
+            
+            .bottom-text .italic {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Menu Button -->
+    <button class="menu-button">
+        <img src="assets/images/long-menu.svg" alt="Menu" width="24">
+        MENU
+    </button>
+    
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="floating-elements">
+            <div class="floating-sphere sphere-1"></div>
+            <div class="floating-sphere sphere-2"></div>
+            <div class="floating-sphere sphere-3"></div>
+        </div>
+        
+        <div class="hero-content">
+            <h1 class="hero-title">Design</h1>
+            <h2 class="hero-subtitle">3D Web Design<br>& Experience</h2>
+        </div>
+    </section>
+    
+    <!-- Content Sections -->
+    <section class="content-section">
+        <div class="content-block" style="position: absolute; top: 22%; left: 6vw;">
+            <h3 class="content-title">Spatial UX.</h3>
+            <p class="content-text">You're no longer constrained by grids, blocks and a flat page. The infinite 3D space becomes your creative canvas, everything is possible — there are no rules.</p>
+        </div>
+        
+        <div class="content-block" style="position: absolute; top: 40%; right: 6vw;">
+            <h3 class="content-title">Interactive.</h3>
+            <p class="content-text">Create immersive experiences that respond to user interaction, bringing your designs to life in three-dimensional space.</p>
+        </div>
+        
+        <div class="content-block" style="position: absolute; top: 60%; left: 6vw;">
+            <h3 class="content-title">Limitless.</h3>
+            <p class="content-text">Break free from traditional web constraints and explore new possibilities in spatial design and user experience.</p>
+        </div>
+    </section>
+    
+    <!-- Bottom Text -->
+    <div class="bottom-text">
+        <span class="italic">Spatial</span> UX.
+    </div>
+    
+    <!-- Scroll Indicator -->
+    <div class="scroll-indicator">SCROLL TO GO UNDER</div>
+    
+    <script>
+        // Simple parallax effect for floating spheres
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const spheres = document.querySelectorAll('.floating-sphere');
+            
+            spheres.forEach((sphere, index) => {
+                const speed = 0.5 + (index * 0.2);
+                sphere.style.transform = `translateY(${scrolled * speed}px)`;
+            });
+        });
+        
+        // Smooth scroll behavior
+        document.documentElement.style.scrollBehavior = 'smooth';
+    </script>
+</body>
+</html>
+
