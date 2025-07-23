@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, Trophy, TrendingUp, TrendingDown, Minus, Search, Filter } from 'lucide-react';
+import { Calendar, Clock, Trophy, TrendingUp, TrendingDown, Minus, Search, Filter, ArrowDownAZ, ArrowDownZA, ArrowDownWideNarrow } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useDebateStore } from '../stores/debateStore';
 import { useEffect } from 'react';
@@ -30,7 +30,10 @@ const HistoryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedResult, setSelectedResult] = useState<'all' | 'win' | 'loss' | 'draw'>('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedType, setSelectedType] = useState<'all' | 'practice' | 'user'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'rating' | 'duration'>('date');
+  const [selectedTopic, setSelectedTopic] = useState('all');
+  const [sortModalOpen, setSortModalOpen] = useState(false);
 
   const { debatesHistory, loadDebateHistory, isLoading } = useDebateStore();
 
@@ -190,8 +193,15 @@ const HistoryPage: React.FC = () => {
     const matchesSearch = debate.topic.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          debate.opponent.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesResult = selectedResult === 'all' || debate.result === selectedResult;
-    const matchesCategory = selectedCategory === 'all' || debate.category === selectedCategory;
-    return matchesSearch && matchesResult && matchesCategory;
+    const matchesTopic = selectedTopic === 'all' || debate.topic === selectedTopic;
+    // Debate type filter
+    let matchesType = true;
+    if (selectedType === 'practice') {
+      matchesType = Array.isArray(debate.participants) && debate.participants.some((p: any) => p.userId === 'ai_opponent');
+    } else if (selectedType === 'user') {
+      matchesType = Array.isArray(debate.participants) && !debate.participants.some((p: any) => p.userId === 'ai_opponent');
+    }
+    return matchesSearch && matchesResult && matchesTopic && matchesType;
   });
 
   const sortedHistory = [...filteredHistory].sort((a, b) => {
@@ -207,7 +217,20 @@ const HistoryPage: React.FC = () => {
     }
   });
 
-  const categories = ['all', ...Array.from(new Set(debates.map(d => d.category)))];
+  // Compute available topics from debates matching all filters except topic
+  const debatesForTopicFilter = debates.filter(debate => {
+    const matchesSearch = debate.topic.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         debate.opponent.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesResult = selectedResult === 'all' || debate.result === selectedResult;
+    let matchesType = true;
+    if (selectedType === 'practice') {
+      matchesType = Array.isArray(debate.participants) && debate.participants.some((p: any) => p.userId === 'ai_opponent');
+    } else if (selectedType === 'user') {
+      matchesType = Array.isArray(debate.participants) && !debate.participants.some((p: any) => p.userId === 'ai_opponent');
+    }
+    return matchesSearch && matchesResult && matchesType;
+  });
+  const availableTopics = ['all', ...Array.from(new Set(debatesForTopicFilter.map(d => d.topic).filter(Boolean)))];
 
   const stats = {
     total: debates.length,
@@ -292,6 +315,7 @@ const HistoryPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');`}</style>
       <div className="container mx-auto px-6 py-8">
         {/* Header */}
         <motion.div
@@ -299,8 +323,18 @@ const HistoryPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-          Debate History
+          <h1
+            className="mb-4"
+            style={{
+              fontFamily: "'Great Vibes', cursive",
+              fontWeight: 700,
+              fontSize: '3.5rem',
+              color: '#4f46e5',
+              letterSpacing: '1px',
+              textShadow: '0 2px 12px rgba(79,70,229,0.08)'
+            }}
+          >
+            Debate History
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
             Track your performance and analyze your debating journey
@@ -350,9 +384,29 @@ const HistoryPage: React.FC = () => {
           transition={{ delay: 0.2 }}
           className="bg-transparent p-6 mb-8 border-b border-gray-200 dark:border-gray-700"
         >
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center flex-wrap">
+            {/* Result Filter - Segmented Buttons (left of search) */}
+            <div className="inline-flex rounded-full shadow-sm overflow-hidden border border-yellow-500 bg-white dark:bg-gray-700 my-2 order-1 md:order-1">
+              {['all', 'win', 'loss', 'draw'].map((result, idx, arr) => {
+                let bg = '';
+                let text = '';
+                if (result === 'all') { bg = selectedResult === 'all' ? 'bg-yellow-400 text-white' : 'text-yellow-700 dark:text-yellow-300'; text = 'All'; }
+                if (result === 'win') { bg = selectedResult === 'win' ? 'bg-green-600 text-white' : 'text-green-700 dark:text-green-300'; text = 'Win'; }
+                if (result === 'loss') { bg = selectedResult === 'loss' ? 'bg-red-600 text-white' : 'text-red-700 dark:text-red-300'; text = 'Loss'; }
+                if (result === 'draw') { bg = selectedResult === 'draw' ? 'bg-blue-600 text-white' : 'text-blue-700 dark:text-blue-300'; text = 'Draw'; }
+                return (
+                  <button
+                    key={result}
+                    onClick={() => setSelectedResult(result as any)}
+                    className={`px-5 py-2 font-medium transition-all duration-200 focus:outline-none border-0 ${bg} ${idx === 0 ? 'rounded-l-full' : ''} ${idx === arr.length - 1 ? 'rounded-r-full' : ''}`}
+                  >
+                    {text}
+                  </button>
+                );
+              })}
+            </div>
             {/* Search */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative order-2 md:order-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
@@ -362,42 +416,84 @@ const HistoryPage: React.FC = () => {
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-
-            {/* Result Filter */}
+            {/* Type Filter - Segmented Buttons (right of search) */}
+            <div className="inline-flex rounded-full shadow-sm overflow-hidden border border-blue-600 bg-white dark:bg-gray-700 my-2 order-3 md:order-3 ml-auto">
+              {['all', 'practice', 'user'].map((type, idx, arr) => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedType(type as any)}
+                  className={`px-5 py-2 font-medium transition-all duration-200 focus:outline-none
+                    ${selectedType === type
+                      ? 'bg-blue-600 text-white'
+                      : 'text-blue-600 dark:text-blue-300 bg-transparent hover:bg-blue-50 dark:hover:bg-blue-800'}
+                    ${idx === 0 ? 'rounded-l-full' : ''}
+                    ${idx === arr.length - 1 ? 'rounded-r-full' : ''}
+                    border-0
+                  `}
+                >
+                  {type === 'all' ? 'All' : type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
+            </div>
+            {/* Line separator */}
+            <div className="w-full h-1 my-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-full order-4" />
+            {/* Topic Filter - Dropdown */}
             <select
-              value={selectedResult}
-              onChange={(e) => setSelectedResult(e.target.value as any)}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={selectedTopic}
+              onChange={(e) => setSelectedTopic(e.target.value)}
+              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ml-auto order-5 md:order-5"
             >
-              <option value="all">All Results</option>
-              <option value="win">Wins</option>
-              <option value="loss">Losses</option>
-              <option value="draw">Draws</option>
-            </select>
-
-            {/* Category Filter */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {categories.map(category => (
-                <option key={category} value={category}>
-                  {category === 'all' ? 'All Categories' : category}
+              {availableTopics.map(topic => (
+                <option key={topic} value={topic}>
+                  {topic === 'all' ? 'All Topics' : topic}
                 </option>
               ))}
             </select>
-
-            {/* Sort By */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="date">Sort by Date</option>
-              <option value="rating">Sort by Rating Change</option>
-              <option value="duration">Sort by Duration</option>
-            </select>
+            {/* Sort By - Icon Button and Modal */}
+            <div className="relative">
+              <button
+                onClick={() => setSortModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-200 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+                title="Sort"
+              >
+                <ArrowDownWideNarrow className="w-5 h-5" />
+                Sort
+              </button>
+              {/* Sort Modal as Popover Dropdown */}
+              {sortModalOpen && (
+                <div className="absolute right-0 mt-2 z-50 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 w-56 flex flex-col gap-4 border border-gray-200 dark:border-gray-700">
+                  {/* Close button */}
+                  <button
+                    onClick={() => setSortModalOpen(false)}
+                    className="absolute top-3 right-3 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-300"
+                    aria-label="Close"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white text-center">Sort By</h3>
+                  <button
+                    onClick={() => { setSortBy('date'); setSortModalOpen(false); }}
+                    className={`w-full px-4 py-3 rounded-lg text-left font-medium transition-colors ${sortBy === 'date' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-blue-100 dark:hover:bg-blue-800'}`}
+                  >
+                    Date
+                  </button>
+                  <button
+                    onClick={() => { setSortBy('rating'); setSortModalOpen(false); }}
+                    className={`w-full px-4 py-3 rounded-lg text-left font-medium transition-colors ${sortBy === 'rating' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-blue-100 dark:hover:bg-blue-800'}`}
+                  >
+                    Rating Change
+                  </button>
+                  <button
+                    onClick={() => { setSortBy('duration'); setSortModalOpen(false); }}
+                    className={`w-full px-4 py-3 rounded-lg text-left font-medium transition-colors ${sortBy === 'duration' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-blue-100 dark:hover:bg-blue-800'}`}
+                  >
+                    Duration
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
 

@@ -23,12 +23,16 @@ import { useAuth } from '../components/auth/AuthProvider';
 
 import { AnimatedCounter } from '../components/animations/AnimatedCounter';
 import { firestore } from '../lib/firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stage } from '@react-three/drei';
 import { Suspense } from 'react';
 import { useLoader } from '@react-three/fiber';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import Footer from '../components/layout/Footer';
+// 1. Import Recharts
+// If not installed, run: npm install recharts
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 function Model() {
   const gltf = useLoader(GLTFLoader, '/model1.glb');
@@ -44,6 +48,7 @@ const DashboardPage: React.FC = () => {
     totalWins: 0
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [ratingHistory, setRatingHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -51,32 +56,59 @@ const DashboardPage: React.FC = () => {
       if (!user?.uid) return;
 
       try {
-        // Fetch user's debate statistics
-        const debatesQuery = query(
-          collection(firestore, 'debates'),
-          where('participants', 'array-contains', { userId: user.uid }),
-          orderBy('createdAt', 'desc')
-        );
-        const debatesSnapshot = await getDocs(debatesQuery);
-        
-        const userDebates = debatesSnapshot.docs.map(doc => doc.data());
-        const totalDebates = userDebates.length;
-        const wins = userDebates.filter(debate => 
-          debate.judgment?.winner === user.uid
-        ).length;
+        // Fetch user stats directly from users collection
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        let wins = 0, losses = 0, draws = 0, gamesPlayed = 0;
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          wins = userData.wins || 0;
+          losses = userData.losses || 0;
+          draws = userData.draws || 0;
+          gamesPlayed = userData.gamesPlayed || 0;
+        }
+        const totalDebates = gamesPlayed;
         const winRate = totalDebates > 0 ? Math.round((wins / totalDebates) * 100) : 0;
-
-        // Calculate current streak (simplified)
-        const currentStreak = Math.floor(Math.random() * 10) + 1; // Mock data for now
-
         setStats({
           totalDebates,
           winRate,
-          currentStreak,
+          currentStreak: 0, // You can implement streak logic if needed
           totalWins: wins
         });
 
-        // Fetch recent activity
+        // Fetch all recent debates and filter in JS for user participation
+        const debatesSnapshot = await getDocs(query(
+          collection(firestore, 'debates'),
+          orderBy('createdAt', 'desc'),
+          limit(30)
+        ));
+        const debates: any[] = debatesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log('Current user UID:', user.uid);
+        console.log('Raw debates:', debates);
+        // Filter debates for user participation
+        const userDebates = debates.filter(d =>
+          Array.isArray(d.participants) && d.participants.some((p: any) => p.userId === user.uid)
+        );
+        // Reconstruct rating history from debates (match HistoryPage logic)
+        const history = userDebates
+          .map(d => {
+            // Use endedAt if available, else createdAt
+            let date = d.endedAt || d.createdAt;
+            if (date?.toDate) date = date.toDate();
+            else if (typeof date === 'string') date = new Date(date);
+            else if (typeof date === 'number') date = new Date(date); // handle numeric timestamps
+            // Get rating after debate for user
+            const rating = d.ratings && d.ratings[user.uid] !== undefined ? d.ratings[user.uid] : null;
+            return {
+              date: date ? date.toLocaleDateString() : '',
+              rating
+            };
+          })
+          .filter(d => d.rating !== null)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // oldest to newest
+        setRatingHistory(history.slice(-20)); // last 20 points
+
+        // Fetch recent activity (optional, can keep as is)
         const activityQuery = query(
           collection(firestore, 'debates'),
           where('participants', 'array-contains', { userId: user.uid }),
@@ -123,6 +155,8 @@ const DashboardPage: React.FC = () => {
       </div>
     );
   }
+
+  console.log('Rating history data:', ratingHistory);
 
   return (
     <>
@@ -332,55 +366,23 @@ const DashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Daily Challenges */}
-              <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.8 }}
-                className="mt-8 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-8 dark:from-yellow-900 dark:to-orange-900 shadow-lg"
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3 tracking-tight dark:text-gray-100">
-                    <Award className="w-6 h-6 text-yellow-600" />
-                    Daily Challenges
-                  </h2>
-                  {/* Rotating icon removed */}
-                </div>
-
-                <div className="space-y-4">
-                  {[
-                    { title: 'Win 3 debates today', progress: 2, total: 3, reward: '+50 ELO' },
-                    { title: 'Participate in 5 debates', progress: 3, total: 5, reward: '+25 ELO' },
-                    { title: 'Achieve 80% win rate', progress: 75, total: 80, reward: '+100 ELO' }
-                  ].map((challenge, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.8, delay: 1 + index * 0.1 }}
-                      className="bg-white rounded-lg p-4 dark:bg-gray-800"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-gray-800 text-sm dark:text-gray-100">{challenge.title}</h3>
-                        <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">{challenge.reward}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${(challenge.progress / challenge.total) * 100}%` }}
-                            transition={{ duration: 1, delay: 1.2 + index * 0.1 }}
-                            className="bg-gradient-to-r from-yellow-500 to-orange-500 h-2 rounded-full dark:from-yellow-400 dark:to-orange-400"
-                          />
-                        </div>
-                        <span className="text-xs text-gray-600 dark:text-gray-300">
-                          {challenge.progress}/{challenge.total}
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
+              {/* Rating Graph Section */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Rating History</h2>
+                {ratingHistory.length === 0 ? (
+                  <div className="text-center text-gray-400 py-8">No rating history available.</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={ratingHistory} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} domain={['auto', 'auto']} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="rating" stroke="#6366f1" strokeWidth={3} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
             </motion.div>
 
             {/* Sidebar */}
@@ -484,6 +486,7 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+      <Footer />
     </>
   );
 };

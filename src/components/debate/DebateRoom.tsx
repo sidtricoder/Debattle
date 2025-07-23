@@ -16,7 +16,7 @@ import { Toast } from '../ui/Toast';
 import { LoadingSpinner } from '../animations/LoadingSpinner';
 import { TypingIndicator } from '../animations/TypingIndicator';
 import { ConfettiAnimation } from '../animations/ConfettiAnimation';
-import { onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { onSnapshot, doc, updateDoc, deleteDoc, increment, getDoc } from 'firebase/firestore';
 import { firestore } from '../../lib/firebase';
 import { 
   Zap, 
@@ -537,6 +537,50 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
       console.log('[DEBUG] Submitting judgment to Firestore:', judgment);
       await endDebate(debateId, judgment); // Only Firestore update triggers UI
       // Do NOT setShowJudgment(true) here
+      // In handleEndDebate, after updating the debate and judgment, update user stats for the human user only
+      if (currentDebate && currentUser) {
+        const userRef = doc(firestore, 'users', currentUser.uid);
+        let statsUpdate: any = {};
+        // Determine result
+        let isDraw = false;
+        let isWin = false;
+        let isLoss = false;
+        if (judgment && judgment.winner) {
+          if (judgment.winner === 'Draw' || judgment.winner === 'draw') {
+            isDraw = true;
+          } else if (judgment.winner === currentUser.uid) {
+            isWin = true;
+          } else {
+            isLoss = true;
+          }
+        }
+        if (isDraw) {
+          statsUpdate = {
+            draws: increment(1),
+            gamesPlayed: increment(1)
+          };
+        } else if (isWin) {
+          statsUpdate = {
+            wins: increment(1),
+            gamesPlayed: increment(1)
+          };
+        } else if (isLoss) {
+          statsUpdate = {
+            losses: increment(1),
+            gamesPlayed: increment(1)
+          };
+        }
+        await updateDoc(userRef, statsUpdate);
+        // Recalculate win_rate after update
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const wins = userData.wins || 0;
+          const gamesPlayed = userData.gamesPlayed || 0;
+          const win_rate = gamesPlayed > 0 ? wins / gamesPlayed : 0;
+          await updateDoc(userRef, { win_rate });
+        }
+      }
     } catch (error) {
       console.error('Failed to end debate:', error);
     } finally {
@@ -1159,6 +1203,15 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
                 onChange={e => {
                   setArgument(e.target.value);
                   handleTyping(e.target.value.length > 0);
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (isMyTurn && argument.trim() && !isSubmitting && !isDebateCompleted && !isTranscribing) {
+                      handleSubmitArgument();
+                    }
+                  }
+                  // Shift+Enter inserts newline (default behavior)
                 }}
                 onBlur={() => handleTyping(false)}
                 placeholder={isDebateCompleted ? 'Debate has ended.' : isMyTurn ? 'Type your argument...' : 'Waiting for your turn...'}

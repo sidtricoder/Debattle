@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { onSnapshot, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { onSnapshot, doc, updateDoc, arrayUnion, getDoc, increment } from 'firebase/firestore';
 import { firestore } from '../../lib/firebase';
 import { useAuthStore } from '../../stores/authStore';
 import { judgeWithGroq } from '../../services/ai/deepseek';
@@ -20,7 +20,8 @@ import {
   Send as SendIcon, 
   MessageSquare,
   Mic,
-  X
+  X,
+  Clipboard
 } from 'lucide-react';
 
 // Constants for user vs user debates
@@ -54,6 +55,8 @@ interface Debate {
   ratings?: Record<string, number>;
   ratingChanges?: Record<string, number>;
   createdAt: Date;
+  proVotes?: number;
+  conVotes?: number;
 }
 
 export const UsersDebateRoom: React.FC = () => {
@@ -98,6 +101,12 @@ export const UsersDebateRoom: React.FC = () => {
   const lastYRef = useRef(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Add voting state
+  const [hasVoted, setHasVoted] = useState<boolean>(false);
+
+  // Add state for copy success
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Create participant details mapping using auth store data
   // (Assume currentUser is always up-to-date from auth store)
@@ -342,24 +351,34 @@ export const UsersDebateRoom: React.FC = () => {
     if (!debate || !currentUser || !argument.trim() || !isMyTurn || isSubmitting || debate.status !== 'active') return;
     setIsSubmitting(true);
     try {
+      // Calculate round: one round = two arguments
+      const nextArgIndex = (debate.arguments?.length || 0);
+      const roundNum = Math.floor(nextArgIndex / 2) + 1;
       const newArgument = {
         id: `arg_${Date.now()}`,
         userId: currentUser.uid,
         content: argument.trim(),
         timestamp: Date.now(),
-        round: debate.currentRound,
+        round: roundNum,
         wordCount: argument.trim().split(' ').length,
       };
-      
-      // Update the full debate object in Firestore (not just arrayUnion)
-      const updatedDebate = {
-        ...debate,
-        arguments: [...(debate.arguments || []), newArgument],
+      // Add argument
+      const updatedArguments = [...(debate.arguments || []), newArgument];
+      // Only increment currentRound after both debaters have submitted for this round
+      let updatedCurrentRound = debate.currentRound;
+      if (updatedArguments.length % 2 === 0) {
+        updatedCurrentRound = debate.currentRound + 1;
+      }
+      // End debate after MAX_ROUNDS rounds (i.e., MAX_ROUNDS*2 arguments)
+      const shouldEnd = updatedCurrentRound > MAX_ROUNDS;
+      await updateDoc(doc(firestore, 'debates', debate.id), {
+        arguments: updatedArguments,
         currentTurn: debate.participants.find(p => p.userId !== currentUser.uid)?.userId || '',
-        currentRound: debate.currentRound + 1,
-      };
-      await updateDoc(doc(firestore, 'debates', debate.id), updatedDebate);
+        currentRound: updatedCurrentRound,
+        status: shouldEnd ? 'completed' : 'active',
+      });
       setArgument('');
+      if (shouldEnd) setTimeout(() => handleEndDebate(), 1000);
     } catch (e) {
       console.error('Failed to submit argument:', e);
     } finally {
@@ -371,31 +390,30 @@ export const UsersDebateRoom: React.FC = () => {
   const handleAutoSubmit = async () => {
     if (!debate || !currentUser || !isMyTurn || debate.status !== 'active') return;
     try {
+      const nextArgIndex = (debate.arguments?.length || 0);
+      const roundNum = Math.floor(nextArgIndex / 2) + 1;
       const newArgument: DebateArgument = {
         id: `arg_${Date.now()}`,
         userId: currentUser.uid,
         content: '[No argument submitted]',
         timestamp: Date.now(),
-        round: debate.currentRound,
+        round: roundNum,
         wordCount: 0,
       };
-      
-      const currentParticipantIndex = debate.participants.findIndex(p => p.userId === currentUser.uid);
-      const nextParticipantIndex = (currentParticipantIndex + 1) % debate.participants.length;
-      const nextTurn = debate.participants[nextParticipantIndex].userId;
-      const isLastRound = debate.currentRound >= MAX_ROUNDS;
-      
+      const updatedArguments = [...(debate.arguments || []), newArgument];
+      let updatedCurrentRound = debate.currentRound;
+      if (updatedArguments.length % 2 === 0) {
+        updatedCurrentRound = debate.currentRound + 1;
+      }
+      const isLastRound = updatedCurrentRound > MAX_ROUNDS;
       await updateDoc(doc(firestore, 'debates', debate.id), {
-        arguments: arrayUnion(newArgument),
-        currentTurn: nextTurn,
-        currentRound: debate.currentRound + 1,
-        status: isLastRound ? 'completed' : 'active'
+        arguments: updatedArguments,
+        currentTurn: debate.participants.find(p => p.userId !== currentUser.uid)?.userId || '',
+        currentRound: updatedCurrentRound,
+        status: isLastRound ? 'completed' : 'active',
       });
-      
-      // If this was the last round, end the debate after a short delay
       if (isLastRound) {
-        console.log('[DEBUG] UsersDebateRoom: Auto-submit completed last round, ending debate');
-        setTimeout(() => handleEndDebate(), 2000); // Delay to allow Firestore update to complete
+        setTimeout(() => handleEndDebate(), 2000);
       }
     } catch (e) {
       console.error('Failed to auto submit:', e);
@@ -432,48 +450,124 @@ export const UsersDebateRoom: React.FC = () => {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       const judgment = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
       
-      // Calculate new ratings if we have current ratings
-      let ratings = null;
-      let ratingChanges = null;
-      if (debate.ratings && judgment?.winner) {
-        ratings = calculateDebateRatings(debate.ratings, judgment.winner);
-        
-        // Calculate rating changes (difference between new and old ratings)
-        ratingChanges = {} as Record<string, number>;
-        for (const userId of Object.keys(ratings)) {
-          const oldRating = debate.ratings[userId];
-          const newRating = ratings[userId];
-          ratingChanges[userId] = newRating - oldRating;
-        }
-
-        // Update each user's rating in Firestore
-        for (const userId of Object.keys(ratings)) {
-          try {
-            await updateDoc(doc(firestore, 'users', userId), {
-              rating: ratings[userId]
-            });
-          } catch (err) {
-            console.error(`Failed to update rating for user ${userId}:`, err);
+      // Get AI winner stance
+      const aiWinnerId = judgment?.winner;
+      const aiWinnerParticipant = debate.participants.find(p => p.userId === aiWinnerId);
+      const aiWinnerStance = aiWinnerParticipant?.stance;
+      // Get voting winner stance and margin
+      const proVotes = debate.proVotes || 0;
+      const conVotes = debate.conVotes || 0;
+      let votingWinnerStance: 'pro' | 'con' | 'draw' = 'draw';
+      let voteMargin = 0;
+      if (proVotes > conVotes) {
+        votingWinnerStance = 'pro';
+        voteMargin = proVotes - conVotes;
+      } else if (conVotes > proVotes) {
+        votingWinnerStance = 'con';
+        voteMargin = conVotes - proVotes;
+      }
+      // Determine final winner
+      let isDraw = false;
+      if (
+        aiWinnerStance &&
+        votingWinnerStance !== 'draw' &&
+        aiWinnerStance !== votingWinnerStance &&
+        voteMargin >= 10
+      ) {
+        isDraw = true;
+      }
+      // If draw, set both as winner and award 5 points each
+      let finalWinnerId = aiWinnerId;
+      let customJudgment = { ...judgment };
+      if (isDraw) {
+        finalWinnerId = null;
+        customJudgment.winner = 'Draw';
+        customJudgment.reasoning = 'AI and voting results differ by a margin of at least 10 votes. Declared as draw.';
+        // Optionally, set scores/feedback for both
+      }
+      // Calculate new ratings/points
+      let ratings: Record<string, number> | null = null;
+      let ratingChanges: Record<string, number> | null = null;
+      if (debate.ratings) {
+        if (isDraw) {
+          // Award both 5 points (or custom logic)
+          ratings = { ...debate.ratings };
+          ratingChanges = {} as Record<string, number>;
+          for (const userId of Object.keys(ratings)) {
+            ratingChanges[userId] = 5;
+            ratings[userId] += 5;
+          }
+        } else if (finalWinnerId) {
+          ratings = calculateDebateRatings(debate.ratings, finalWinnerId);
+          ratingChanges = {} as Record<string, number>;
+          for (const userId of Object.keys(ratings)) {
+            const oldRating = debate.ratings[userId];
+            const newRating = ratings[userId];
+            ratingChanges[userId] = newRating - oldRating;
           }
         }
-        
-        // Refresh user data to sync with Firebase
+        // Update user ratings in Firestore
+        if (ratings) {
+          for (const userId of Object.keys(ratings)) {
+            try {
+              await updateDoc(doc(firestore, 'users', userId), {
+                rating: ratings[userId]
+              });
+            } catch (err) {
+              console.error(`Failed to update rating for user ${userId}:`, err);
+            }
+          }
+        }
         await refreshUserData();
       }
-      
-      // Update debate with judgment, ratings, and rating changes
+      // Update debate with custom judgment, ratings, and rating changes
       const updatedDebate = {
         ...debate,
         status: 'completed',
-        judgment,
+        judgment: customJudgment,
         ratings,
         ratingChanges,
         endedAt: Date.now(),
         endReason: 'manual',
       };
       await updateDoc(doc(firestore, 'debates', debate.id), updatedDebate);
-      
       setShowJudgment(true);
+
+      // After updating ratings in handleEndDebate, update user stats
+      if (debate.participants && Array.isArray(debate.participants)) {
+        for (const participant of debate.participants) {
+          const userRef = doc(firestore, 'users', participant.userId);
+          let statsUpdate: any = {};
+          if (isDraw) {
+            statsUpdate = {
+              draws: increment(1),
+              gamesPlayed: increment(1)
+            };
+          } else if (finalWinnerId) {
+            if (participant.userId === finalWinnerId) {
+              statsUpdate = {
+                wins: increment(1),
+                gamesPlayed: increment(1)
+              };
+            } else {
+              statsUpdate = {
+                losses: increment(1),
+                gamesPlayed: increment(1)
+              };
+            }
+          }
+          await updateDoc(userRef, statsUpdate);
+          // Recalculate win_rate after update
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            const wins = userData.wins || 0;
+            const gamesPlayed = userData.gamesPlayed || 0;
+            const win_rate = gamesPlayed > 0 ? wins / gamesPlayed : 0;
+            await updateDoc(userRef, { win_rate });
+          }
+        }
+      }
     } catch (error) {
       console.error('Error ending debate:', error);
       // Still end the debate even if judgment fails
@@ -497,6 +591,40 @@ export const UsersDebateRoom: React.FC = () => {
       handleEndDebate();
     }
   }, [debate]);
+
+  // Determine if current user is a debater
+  const isDebater = debate?.participants.some(p => p.userId === currentUser?.uid);
+
+  // Voting handler
+  const handleVote = async (vote: 'pro' | 'con') => {
+    if (!debate || !currentUser || isDebater || hasVoted) return;
+    const debateRef = doc(firestore, 'debates', debate.id);
+    try {
+      await updateDoc(debateRef, {
+        [vote === 'pro' ? 'proVotes' : 'conVotes']: (debate[vote === 'pro' ? 'proVotes' : 'conVotes'] || 0) + 1
+      });
+      setHasVoted(true);
+      localStorage.setItem(`debate_voted_${debate.id}_${currentUser.uid}`, '1');
+    } catch (e) {
+      console.error('Failed to vote:', e);
+    }
+  };
+  // On mount, check if user has already voted
+  useEffect(() => {
+    if (debate && currentUser) {
+      setHasVoted(!!localStorage.getItem(`debate_voted_${debate.id}_${currentUser.uid}`));
+    }
+  }, [debate, currentUser]);
+
+  // Copy to clipboard handler
+  const handleCopyShare = () => {
+    if (!debate || !currentUser) return;
+    const opponent = debate.participants.find(p => p.userId !== currentUser.uid);
+    const shareMsg = `Hey there! I'm having a debate on "${debate.topic}" with ${opponent?.displayName || 'an opponent'}. Join this debate to support me in favor (pro) or against (con) the topic.\nDebate link: ${window.location.href}`;
+    navigator.clipboard.writeText(shareMsg);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
+  };
 
   // Loading state
   if (isLoading) {
@@ -561,6 +689,14 @@ export const UsersDebateRoom: React.FC = () => {
       []
     );
   };
+
+  const votingWinnerLabel = (() => {
+    const proVotes = debate?.proVotes || 0;
+    const conVotes = debate?.conVotes || 0;
+    if (proVotes > conVotes) return 'Pro';
+    if (conVotes > proVotes) return 'Con';
+    return 'Draw';
+  })();
 
   return (
     <div className="relative min-h-screen w-full flex flex-col bg-black text-white" style={{background: '#000'}}>
@@ -727,90 +863,94 @@ export const UsersDebateRoom: React.FC = () => {
         )}
       </div>
       
-      {/* Input area - TEMPORARILY ALWAYS SHOW for debugging */}
+      {/* Input area - show voting for visitors, argument input for debaters */}
       <div className="w-full bg-[#101010] border-t border-gray-800 px-2 md:px-8 py-4 flex flex-col gap-0 sticky bottom-0 z-20" style={{boxShadow: '0 -2px 16px 0 #0008'}}>
-          {/* Drag handle */}
-          <div 
-            ref={dragHandleRef}
-            className="flex justify-center py-2 cursor-ns-resize hover:bg-gray-800/50 transition-colors"
-            onMouseDown={(e) => {
-              draggingRef.current = true;
-              lastYRef.current = e.clientY;
-            }}
-          >
-            <div className="w-16 h-1.5 rounded bg-gray-700" />
-          </div>
-          <div className="flex items-center gap-3">
-            {/* End Debate button on the left */}
-            <Button
-              onClick={handleEndDebate}
-              disabled={!debate || isSubmitting || isDebateCompleted}
-              className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl mr-2 ${isDebateCompleted ? 'opacity-60 cursor-not-allowed' : ''}`}
-              title="End Debate"
-            >
-              <Flag className="w-5 h-5" />
-            </Button>
-            {/* Voice input button: hide on Brave/Firefox */}
-            {!isBraveOrFirefox && (
-              <Button
-                onClick={isRecording ? handleStopRecording : handleStartRecording}
-                disabled={isTranscribing || isSubmitting || isDebateCompleted}
-                className={`px-3 py-2 rounded-xl font-semibold flex items-center gap-2 ${isRecording ? 'bg-red-600 text-white animate-pulse' : 'bg-blue-700 text-white'} ${isTranscribing ? 'opacity-60 cursor-not-allowed' : ''}`}
-                title={isRecording ? 'Stop Recording' : 'Start Voice Input'}
-              >
-                <Mic className="w-5 h-5" />
-              </Button>
-            )}
-            {/* Argument input */}
-            <textarea
-              ref={argumentInputRef}
-              value={argument}
-              onChange={e => {
-                setArgument(e.target.value);
-              }}
-              placeholder={isDebateCompleted ? 'Debate has ended.' : isMyTurn ? 'Type your argument...' : 'Waiting for your turn...'}
-              disabled={!isMyTurn || isSubmitting || isDebateCompleted || isTranscribing}
-              className={`flex-1 rounded-xl px-4 py-3 text-base border-2 focus:ring-2 transition-all duration-200
-                ${isMyTurn && !isDebateCompleted ? 'border-green-500 focus:ring-green-600' : 'border-gray-600'}
-                bg-gray-900 text-white placeholder-gray-400
-                ${!isMyTurn || isSubmitting || isDebateCompleted || isTranscribing ? 'opacity-60 cursor-not-allowed' : ''}
-              `}
-              style={{height: inputHeight, minHeight: 48, maxHeight: 240, resize: 'none'}}
-              rows={2}
-            />
-            {/* Send button */}
-            <Button
-              onClick={handleSubmitArgument}
-              disabled={!isMyTurn || !argument.trim() || isSubmitting || isDebateCompleted || isTranscribing}
-              className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2
-                ${isMyTurn && argument.trim() && !isSubmitting && !isDebateCompleted && !isTranscribing ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 shadow-lg hover:shadow-xl' : 'bg-gray-700 text-gray-400 cursor-not-allowed'}
-              `}
-              title="Send Argument"
-            >
-              {isSubmitting ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <SendIcon className="w-5 h-5" />
-              )}
-            </Button>
-          </div>
-          {/* Transcribing/recording status and errors */}
-          {isRecording && (
-            <div className="text-sm text-blue-400 mt-2 flex items-center gap-2 animate-pulse">
-              <span>Recording... Speak now.</span>
-            </div>
-          )}
-          {isTranscribing && (
-            <div className="text-sm text-blue-400 mt-2 flex items-center gap-2 animate-pulse">
-              <span>Transcribing voice input...</span>
-            </div>
-          )}
-          {voiceError && (
-            <div className="text-sm text-red-400 mt-2 flex items-center gap-2">
-              <span>{voiceError}</span>
-            </div>
-          )}
+        {/* Drag handle */}
+        <div 
+          ref={dragHandleRef}
+          className="flex justify-center py-2 cursor-ns-resize hover:bg-gray-800/50 transition-colors"
+          onMouseDown={(e) => {
+            draggingRef.current = true;
+            lastYRef.current = e.clientY;
+          }}
+        >
+          <div className="w-16 h-1.5 rounded bg-gray-700" />
         </div>
+        {/* Argument input */}
+        <div className="flex items-center gap-3">
+          {/* Clipboard icon on the left */}
+          <button
+            onClick={handleCopyShare}
+            type="button"
+            title="Copy debate invite"
+            className={`p-2 rounded-lg transition-colors duration-200 border-none outline-none focus:ring-2 focus:ring-green-400 ${copySuccess ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Clipboard className={`w-6 h-6 ${copySuccess ? 'text-white' : ''}`} />
+          </button>
+          {/* End Debate button on the left */}
+          <Button
+            onClick={handleEndDebate}
+            disabled={!debate || isSubmitting || isDebateCompleted || (debate && debate.currentRound <= MAX_ROUNDS)}
+            className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl mr-2 ${isDebateCompleted || (debate && debate.currentRound <= MAX_ROUNDS) ? 'opacity-60 cursor-not-allowed' : ''}`}
+            title={debate && debate.currentRound <= MAX_ROUNDS ? 'The debate can only be ended after completion of all rounds' : 'End Debate'}
+          >
+            <Flag className="w-5 h-5" />
+          </Button>
+          {/* Voice input button: hide on Brave/Firefox */}
+          {!isBraveOrFirefox && (
+            <Button
+              onClick={isRecording ? handleStopRecording : handleStartRecording}
+              disabled={isTranscribing || isSubmitting || isDebateCompleted}
+              className={`px-3 py-2 rounded-xl font-semibold flex items-center gap-2 ${isRecording ? 'bg-red-600 text-white animate-pulse' : 'bg-blue-700 text-white'} ${isTranscribing ? 'opacity-60 cursor-not-allowed' : ''}`}
+              title={isRecording ? 'Stop Recording' : 'Start Voice Input'}
+            >
+              <Mic className="w-5 h-5" />
+            </Button>
+          )}
+          {/* Argument input */}
+          <textarea
+            ref={argumentInputRef}
+            value={argument}
+            onChange={e => {
+              setArgument(e.target.value);
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (isMyTurn && argument.trim() && !isSubmitting && !isDebateCompleted && !isTranscribing) {
+                  handleSubmitArgument();
+                }
+              }
+              // Shift+Enter inserts newline (default behavior)
+            }}
+            placeholder={isDebateCompleted ? 'Debate has ended.' : isMyTurn ? 'Type your argument...' : 'Waiting for your turn...'}
+            disabled={!isMyTurn || isSubmitting || isDebateCompleted || isTranscribing}
+            className={`flex-1 rounded-xl px-4 py-3 text-base border-2 focus:ring-2 transition-all duration-200
+              ${isMyTurn && !isDebateCompleted ? 'border-green-500 focus:ring-green-600' : 'border-gray-600'}
+              bg-gray-900 text-white placeholder-gray-400
+              ${!isMyTurn || isSubmitting || isDebateCompleted || isTranscribing ? 'opacity-60 cursor-not-allowed' : ''}
+            `}
+            style={{height: inputHeight, minHeight: 48, maxHeight: 240, resize: 'none'}}
+            rows={2}
+          />
+          {/* Send button */}
+          <Button
+            onClick={handleSubmitArgument}
+            disabled={!isMyTurn || !argument.trim() || isSubmitting || isDebateCompleted || isTranscribing}
+            className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2
+              ${isMyTurn && argument.trim() && !isSubmitting && !isDebateCompleted && !isTranscribing ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 shadow-lg hover:shadow-xl' : 'bg-gray-700 text-gray-400 cursor-not-allowed'}
+            `}
+            title="Send Argument"
+          >
+            {isSubmitting ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <SendIcon className="w-5 h-5" />
+            )}
+          </Button>
+        </div>
+      </div>
       
       {/* After the chat area, but before the modals, add a new section for winner and scores if debate is completed and judgment is present */}
       {isDebateCompleted && debate.judgment && (() => {
@@ -871,6 +1011,20 @@ export const UsersDebateRoom: React.FC = () => {
           </div>
         );
       })()}
+      {/* Move the voting info box to just below the results section (winner and scores) */}
+      {isDebateCompleted && (
+        <div className="flex justify-center mt-2">
+          <div className="bg-gray-900 border border-gray-700 rounded-lg px-6 py-3 flex flex-col items-center gap-2">
+            <div className="flex gap-6">
+              <span className="text-green-400 font-bold">Pro votes: {debate?.proVotes || 0}</span>
+              <span className="text-red-400 font-bold">Con votes: {debate?.conVotes || 0}</span>
+            </div>
+            <div className="text-sm text-gray-300 mt-1">
+              Voting winner: {votingWinnerLabel}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Modals, overlays, and toasts remain unchanged below */}
 
       {/* Judgment Modal */}

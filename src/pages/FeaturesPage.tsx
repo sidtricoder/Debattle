@@ -5,6 +5,8 @@ import type { ScrollControlsState } from '@react-three/drei';
 import * as THREE from 'three';
 import { useLoader } from '@react-three/fiber';
 import logoDark from '../../public/logo-dark.png';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import RainbowTrailBackground from '../components/animations/RainbowTrailBackground';
 
 // --- TYPE DEFINITIONS ---
 type Feature = {
@@ -18,43 +20,43 @@ type Feature = {
 // --- CONSTANTS ---
 const features: Feature[] = [
   {
-    title: "Real-time Debates",
-    description: "Engage in live debates with participants from around the world.",
+    title: "Real-time Debate Matching",
+    description: "Find opponents based on skill level and topic preferences.",
     position: [-5, 2, 0],
     side: 'left',
     color: '#ff6b6b'
   },
   {
-    title: "AI-Powered Moderation",
-    description: "Smart moderation ensures fair and productive discussions.",
+    title: "Practice Mode",
+    description: "Practice debating against AI opponents with different personalities and difficulty levels.",
     position: [5, -2, 0],
     side: 'right',
     color: '#4ecdc4'
   },
   {
-    title: "Topic Suggestions",
-    description: "Get intelligent topic recommendations based on current events.",
+    title: "ELO Rating System",
+    description: "Compete and climb the leaderboard with a fair, competitive ranking system.",
     position: [-5, -6, 0],
     side: 'left',
     color: '#45b7d1'
   },
   {
-    title: "Skill Analytics",
-    description: "Track your debating skills and improvement over time.",
+    title: "Global Leaderboard",
+    description: "View and filter global rankings by rating, games played, win rate, and tier.",
     position: [5, -10, 0],
     side: 'right',
     color: '#96ceb4'
   },
   {
-    title: "Community Voting",
-    description: "Let the community vote on the most compelling arguments.",
+    title: "Debate History & Achievements",
+    description: "Track your past debates, results, and unlock achievements and badges for milestones.",
     position: [-5, -14, 0],
     side: 'left',
     color: '#ffeead'
   },
   {
-    title: "Expert Insights",
-    description: "Learn from debate experts and improve your techniques.",
+    title: "Modern UI & Accessibility",
+    description: "Enjoy a beautiful, responsive design with dark/light mode, smooth animations, and accessibility features.",
     position: [5, -18, 0],
     side: 'right',
     color: '#ffcc5c'
@@ -345,14 +347,13 @@ function CardMeshes({ meshRef, glowMeshRef, color }: {
 }
 
 function Scene({ activeIndex }: { activeIndex: number }) {
-  const logoTexture = useLoader(THREE.TextureLoader, logoDark);
+  const globe = useLoader(GLTFLoader, '/globe.glb');
   const contentGroupRef = useRef<THREE.Group>(null);
-  const sphereRef = useRef<THREE.Mesh>(null);
-  const ringRef = useRef<THREE.Mesh>(null);
+  const globeRef = useRef<THREE.Group>(null);
   const totalFeatures = features.length;
 
   useFrame((state, delta) => {
-    if (!contentGroupRef.current || !sphereRef.current) return;
+    if (!contentGroupRef.current || !globeRef.current) return;
 
     // Smooth content group movement
     const targetGroupY = -features[activeIndex].position[1];
@@ -362,35 +363,29 @@ function Scene({ activeIndex }: { activeIndex: number }) {
       delta * 6 // Increased speed
     );
 
-    // Enhanced central sphere animation
+    // Enhanced central globe animation
     const activeFeature = features[activeIndex];
-    const targetSphereY = activeFeature.position[1];
-    const targetSphereX = activeFeature.position[0] * 0.1; // Subtle horizontal movement
+    const targetGlobeY = activeFeature.position[1];
+    const targetGlobeX = activeFeature.position[0] * 0.1; // Subtle horizontal movement
 
-    sphereRef.current.position.y = THREE.MathUtils.lerp(
-      sphereRef.current.position.y,
-      targetSphereY,
+    globeRef.current.position.y = THREE.MathUtils.lerp(
+      globeRef.current.position.y,
+      targetGlobeY,
       delta * 6
     );
 
-    sphereRef.current.position.x = THREE.MathUtils.lerp(
-      sphereRef.current.position.x,
-      targetSphereX,
+    globeRef.current.position.x = THREE.MathUtils.lerp(
+      globeRef.current.position.x,
+      targetGlobeX,
       delta * 4
     );
 
-    // Enhanced sphere rotation and pulsing
-    sphereRef.current.rotation.y += delta * 0.3;
-    sphereRef.current.rotation.x += delta * 0.15;
+    // Enhanced globe rotation and pulsing
+    globeRef.current.rotation.y += delta * 0.3;
+    globeRef.current.rotation.x += delta * 0.15;
 
     const pulseScale = 1 + Math.sin(state.clock.elapsedTime * 2) * 0.1;
-    sphereRef.current.scale.setScalar(pulseScale);
-
-    // Animate ring
-    if (ringRef.current) {
-      ringRef.current.rotation.x = state.clock.elapsedTime * 0.5;
-      ringRef.current.rotation.z = state.clock.elapsedTime * -0.3;
-    }
+    globeRef.current.scale.setScalar(pulseScale);
 
     // Enhanced camera movement
     const mouseInfluence = 0.5;
@@ -401,42 +396,11 @@ function Scene({ activeIndex }: { activeIndex: number }) {
 
   return (
     <group ref={contentGroupRef}>
-      {/* Enhanced central sphere with more visual impact */}
-      <mesh ref={sphereRef}>
-        <sphereGeometry args={[1.4, 128, 128]} />
-        <meshStandardMaterial
-          map={logoTexture}
-          emissive="#b6aaff"
-          emissiveIntensity={1.5}
-          metalness={0.9}
-          roughness={0.1}
-          toneMapped={false}
-        />
-      </mesh>
+      {/* Central globe GLB model */}
+      <group ref={globeRef}>
+        <primitive object={globe.scene} scale={1.4} />
+      </group>
 
-      {/* Rotating ring around sphere */}
-      <mesh ref={ringRef}>
-        <torusGeometry args={[2.2, 0.1, 16, 100]} />
-        <meshStandardMaterial
-          color="#b6aaff"
-          emissive="#b6aaff"
-          emissiveIntensity={0.8}
-          transparent
-          opacity={0.6}
-        />
-      </mesh>
-
-      {/* Central lighting */}
-      <pointLight color="#b6aaff" intensity={4} distance={12} decay={1.5} />
-      <spotLight
-        color="#b6aaff"
-        intensity={3}
-        distance={20}
-        angle={Math.PI / 4}
-        penumbra={0.5}
-        position={[0, 0, 8]}
-      />
-      
       {features.map((feature, index) => (
         <FeatureCard
           key={feature.title}
@@ -447,10 +411,10 @@ function Scene({ activeIndex }: { activeIndex: number }) {
       ))}
       
       {/* Enhanced lighting setup */}
-      <ambientLight intensity={0.15} color="#1a1a3e" />
-      <directionalLight position={[15, 15, 5]} intensity={0.4} color="#b6aaff" />
-      <pointLight position={[-10, 5, -5]} intensity={0.8} color="#ff6b6b" />
-      <pointLight position={[10, -5, -5]} intensity={0.8} color="#4ecdc4" />
+      <ambientLight intensity={0.3} color="#1a1a3e" />
+      <directionalLight position={[15, 15, 5]} intensity={2.2} color="#b6aaff" />
+      <pointLight position={[-10, 5, -5]} intensity={2.5} color="#ff6b6b" />
+      <pointLight position={[10, -5, -5]} intensity={2.5} color="#4ecdc4" />
       
       <Environment preset="night" />
       <fog attach="fog" args={['#000000', 20, 45]} />
@@ -506,13 +470,13 @@ const FeaturesPage = () => {
   };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#000000', position: 'relative' }}>
+    <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+      <RainbowTrailBackground />
       <Canvas
         camera={{ position: [0, 0, 12], fov: 50 }}
         gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
         dpr={[1, 2]}
       >
-        <color attach="background" args={['#000000']} />
         <Suspense fallback={null}>
           <Scene activeIndex={activeIndex} />
         </Suspense>
@@ -589,13 +553,13 @@ const FeaturesPage = () => {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
         }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Great+Vibes&display=swap');
         body { 
           margin: 0; 
           padding: 0; 
           overflow: hidden; 
           font-family: 'Inter', sans-serif; 
-          background: #000000; 
+          /* background: #000000; */
         }
         * { 
           box-sizing: border-box; 
@@ -605,6 +569,24 @@ const FeaturesPage = () => {
           background: transparent; 
         }
       `}} />
+      {/* Calligraphy heading */}
+      <h1
+        style={{
+          position: 'absolute',
+          top: 32,
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontFamily: "'Great Vibes', cursive",
+          fontSize: '4rem',
+          color: '#fff9b1',
+          zIndex: 20,
+          pointerEvents: 'none',
+          userSelect: 'none',
+        }}
+      >
+        Features
+      </h1>
     </div>
   );
 };

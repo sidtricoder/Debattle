@@ -31,10 +31,10 @@ const Footer: React.FC = () => {
   };
 
   const socialLinks = [
-    { name: 'GitHub', href: 'https://github.com', icon: Github },
-    { name: 'Twitter', href: 'https://twitter.com', icon: Twitter },
-    { name: 'LinkedIn', href: 'https://linkedin.com', icon: Linkedin },
-    { name: 'Email', href: 'mailto:contact@debattle.com', icon: Mail }
+    { name: 'GitHub', href: 'https://github.com/sidtricoder/', icon: Github },
+    // { name: 'Twitter', href: 'https://twitter.com', icon: Twitter },
+    { name: 'LinkedIn', href: 'https://www.linkedin.com/in/siddharth-brijesh-tripathi/', icon: Linkedin },
+    { name: 'Email', href: 'mailto:sid.dev.2006@gmail.com', icon: Mail }
   ];
 
   const features = [
@@ -62,8 +62,12 @@ const Footer: React.FC = () => {
           {/* Brand Section */}
           <div className="mb-8 md:mb-0 md:w-1/4">
             <Link to="/" className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">D</span>
+              <div className="relative w-10 h-10 flex items-center justify-center">
+                <img 
+                  src="/logo-light.png" 
+                  alt="Debattle Logo" 
+                  className="w-10 h-10 rounded-xl shadow-lg bg-white transition-transform duration-200 hover:scale-105" 
+                />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 Debattle

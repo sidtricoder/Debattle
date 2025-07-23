@@ -38,7 +38,7 @@ const FAQS = [
 ];
 
 const LandingPage: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, signInWithGoogle } = useAuth();
   const [liveDebates, setLiveDebates] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
   const [currentFeature, setCurrentFeature] = useState(0);
@@ -137,7 +137,7 @@ const LandingPage: React.FC = () => {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl leading-relaxed"
             >
-              Join thousands of debaters worldwide and unlock your full potential as a communicator and critical thinker. Debattle empowers you to challenge worthy opponents, sharpen your reasoning, and climb the ELO rankings in the <span className="text-blue-600 font-semibold">Chess.com of debating</span>. Experience lightning-fast matchmaking, AI-powered judging, and a vibrant global community—all designed to help you master the art of debate and become a leader in the arena of ideas.
+              Join thousands of debaters worldwide and unlock your full potential as a communicator and critical thinker. Debattle empowers you to challenge worthy opponents, sharpen your reasoning, and climb the ELO rankings in the <span className="text-blue-600 font-semibold">the premier online debate league</span>. Experience lightning-fast matchmaking, AI-powered judging, and a vibrant global community—all designed to help you master the art of debate and become a leader in the arena of ideas.
             </motion.p>
           </motion.div>
           
@@ -158,22 +158,14 @@ const LandingPage: React.FC = () => {
                 <ArrowRight className="w-5 h-5" />
               </Link>
             ) : (
-              <>
-                <Link
-                  to="/register"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-3 text-lg"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  Start Debating
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <Link
-                  to="/login"
-                  className="border-2 border-blue-600 text-blue-600 dark:text-blue-400 px-8 py-4 rounded-xl font-bold hover:bg-blue-600 hover:text-white transition-all duration-200 flex items-center gap-3 text-lg"
-                >
-                  Sign In
-                </Link>
-              </>
+              <button
+                onClick={signInWithGoogle}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-3 text-lg"
+              >
+                <Sparkles className="w-5 h-5" />
+                Start Debating
+                <ArrowRight className="w-5 h-5" />
+              </button>
             )}
           </motion.div>
 
