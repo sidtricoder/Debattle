@@ -151,7 +151,7 @@ const Header: React.FC = () => {
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Debattle
               </span>
-              <span className={`text-xs font-medium transition-colors duration-200 ${getSubtitleClasses()}`}>
+              <span className="text-xs font-medium transition-colors duration-200 text-blue-600 dark:text-blue-400">
                 The Arena of Ideas
               </span>
             </div>
@@ -168,7 +168,7 @@ const Header: React.FC = () => {
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                     isActive(item.href)
                       ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
-                      : `${getTextClasses()} ${getHoverClasses()}`
+                      : 'text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400'
                   }`}
                 >
                   <Icon className="w-4 h-4" />

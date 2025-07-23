@@ -102,6 +102,7 @@ const LeaderboardPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');`}</style>
       <div className="container mx-auto px-6 py-8">
           {/* Header */}
           <motion.div
@@ -109,7 +110,17 @@ const LeaderboardPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-8"
           >
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <h1
+              className="mb-4"
+              style={{
+                fontFamily: "'Great Vibes', cursive",
+                fontWeight: 700,
+                fontSize: '3.5rem',
+                color: '#4f46e5',
+                letterSpacing: '1px',
+                textShadow: '0 2px 12px rgba(79,70,229,0.08)'
+              }}
+            >
               Global Leaderboard
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300">

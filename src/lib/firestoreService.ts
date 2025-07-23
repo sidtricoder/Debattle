@@ -25,7 +25,6 @@ export interface User {
   name: string;
   username: string;
   elo_rating: number;
-  total_debates: number;
   wins: number;
   losses: number;
   draws: number;

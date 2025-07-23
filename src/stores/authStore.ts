@@ -71,6 +71,13 @@ const fetchUserFromFirestore = async (uid: string, set: any) => {
     const user = toUser(userDoc.data());
     set({ user, isAuthenticated: true, loading: false });
     localStorage.setItem('debattle_user', JSON.stringify(user));
+    // Set theme immediately after fetching user
+    const theme = user.preferences?.theme || 'light';
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
     return user;
   }
   return null;
@@ -116,6 +123,13 @@ export const useAuthStore = create<AuthStore>()(
               isAuthenticated: true, 
               loading: false 
             });
+            // Set theme immediately after sign in
+            const theme = newUser.preferences?.theme || 'light';
+            if (theme === 'dark') {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
           } else {
             // Update last active timestamp
             await setDoc(
@@ -132,6 +146,13 @@ export const useAuthStore = create<AuthStore>()(
               isAuthenticated: true, 
               loading: false 
             });
+            // Set theme immediately after sign in
+            const theme = userData.preferences?.theme || 'light';
+            if (theme === 'dark') {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
           }
         } catch (error: any) {
           console.error('Google sign in error:', error);
@@ -217,6 +238,13 @@ export const useAuthStore = create<AuthStore>()(
               loading: false, 
               isAuthenticated: true 
             });
+            // Set theme immediately after cached user
+            const theme = user.preferences?.theme || 'light';
+            if (theme === 'dark') {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
           } catch (error) {
             localStorage.removeItem('debattle_user');
           }

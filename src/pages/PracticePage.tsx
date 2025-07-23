@@ -7,6 +7,7 @@ import { useDebateStore } from '../stores/debateStore';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
 import { PracticeSettingsModal } from '../components/practice/PracticeSettingsModal';
+import Footer from '../components/layout/Footer';
 
 interface PracticeTopic {
   id: string;
@@ -251,6 +252,7 @@ const PracticePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-pink-900/20 relative overflow-hidden">
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');`}</style>
       {/* Floating Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -356,7 +358,17 @@ const PracticePage: React.FC = () => {
               <Brain className="w-10 h-10 text-white" />
             </div>
           </motion.div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+          <h1
+            style={{
+              fontFamily: "'Great Vibes', cursive",
+              fontWeight: 700,
+              fontSize: '3.5rem',
+              color: '#4f46e5',
+              letterSpacing: '1px',
+              textShadow: '0 2px 12px rgba(79,70,229,0.08)'
+            }}
+            className="mb-4"
+          >
             Practice Arena
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
@@ -618,6 +630,7 @@ const PracticePage: React.FC = () => {
           }}
         />
       )}
+      <Footer />
     </div>
   );
 };

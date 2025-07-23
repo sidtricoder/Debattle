@@ -4,30 +4,8 @@ import { Link } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { Github, Linkedin, Mail, Award, Shield, Users, Zap, Trophy, Brain, Sparkles, Globe, BarChart2, MessageSquare, Clock, CheckCircle } from 'lucide-react';
+import { useAuth } from '../components/auth/AuthProvider';
 
-const teamMembers = [
-  {
-    name: 'Alex Johnson',
-    role: 'Founder & CEO',
-    bio: 'Debate champion with 10+ years of experience in competitive debating and education.',
-    image: 'https://randomuser.me/api/portraits/men/32.jpg',
-    social: { linkedin: '#', twitter: '#' }
-  },
-  {
-    name: 'Sarah Chen',
-    role: 'Lead Developer',
-    bio: 'Full-stack developer passionate about creating seamless user experiences.',
-    image: 'https://randomuser.me/api/portraits/women/44.jpg',
-    social: { linkedin: '#', github: '#' }
-  },
-  {
-    name: 'Michael Rodriguez',
-    role: 'AI/ML Engineer',
-    bio: 'Specializes in natural language processing and machine learning models.',
-    image: 'https://randomuser.me/api/portraits/men/75.jpg',
-    social: { linkedin: '#', github: '#' }
-  }
-];
 
 const stats = [
   { value: '10,000+', label: 'Active Users', icon: Users },
@@ -60,6 +38,8 @@ const features = [
 ];
 
 const AboutPage: React.FC = () => {
+  const { signInWithGoogle } = useAuth();
+
   return (
     <div className="min-h-screen flex flex-col bg-background dark:bg-gray-950 text-foreground dark:text-gray-200">
       <Header />
@@ -90,12 +70,12 @@ const AboutPage: React.FC = () => {
               transition={{ delay: 0.2, duration: 0.5 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Link
-                to="/auth/register"
+              <button
+                onClick={signInWithGoogle}
                 className="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors"
               >
                 Join Now - It's Free
-              </Link>
+              </button>
               <Link
                 to="/features"
                 className="px-6 py-3 border border-primary text-primary hover:bg-primary/10 dark:hover:bg-primary/5 rounded-lg font-medium transition-colors"
@@ -207,12 +187,12 @@ const AboutPage: React.FC = () => {
               transition={{ delay: 0.2, duration: 0.5 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Link
-                to="/auth/register"
+              <button
+                onClick={signInWithGoogle}
                 className="px-6 py-3 bg-white text-primary hover:bg-gray-100 rounded-lg font-medium transition-colors"
               >
                 Get Started for Free
-              </Link>
+              </button>
               <Link
                 to="/features"
                 className="px-6 py-3 border border-white/20 hover:bg-white/10 rounded-lg font-medium transition-colors"
@@ -299,12 +279,12 @@ const AboutPage: React.FC = () => {
             transition={{ delay: 0.2, duration: 0.5 }}
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <Link
-              to="/auth/register"
+            <button
+              onClick={signInWithGoogle}
               className="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors"
             >
               Get Started for Free
-            </Link>
+            </button>
             <Link
               to="/features"
               className="px-6 py-3 border border-primary text-primary hover:bg-primary/5 rounded-lg font-medium transition-colors"
@@ -363,7 +343,7 @@ const AboutPage: React.FC = () => {
                   
                   <div className="flex space-x-4 mt-8">
                     <a 
-                      href="https://github.com/sidwebworks" 
+                      href="https://github.com/sidtricoder/" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
@@ -372,7 +352,7 @@ const AboutPage: React.FC = () => {
                       <Github className="w-5 h-5" />
                     </a>
                     <a 
-                      href="https://linkedin.com/in/sidwebworks" 
+                      href="https://www.linkedin.com/in/siddharth-brijesh-tripathi/" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
@@ -381,7 +361,7 @@ const AboutPage: React.FC = () => {
                       <Linkedin className="w-5 h-5" />
                     </a>
                     <a 
-                      href="mailto:sidwebworks@gmail.com" 
+                      href="mailto:sid.dev.2006@gmail.com" 
                       className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
                       aria-label="Email"
                     >
