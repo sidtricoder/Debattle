@@ -500,31 +500,31 @@ const PracticePage: React.FC = () => {
             </div>
           ) : (
             <div className="w-full">
-              {/* Responsive grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6">
+              {/* Responsive grid - 1 column on mobile, 2 on tablet, 3 on laptop, 4 on desktop */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 {filteredTopics.map((topic) => (
                   <div 
                     key={topic.id} 
                     className="bg-white dark:bg-gray-800/50 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 flex flex-col h-full"
                   >
-                    <div className="p-4 md:p-5 lg:p-6 flex flex-col h-full">
+                    <div className="p-4 md:p-5 lg:p-6 flex flex-col h-full min-h-[280px]">
                       <div className="flex items-start justify-between mb-3">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getDifficultyColor(topic.difficulty)}`}>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getDifficultyColor(topic.difficulty)} whitespace-nowrap`}>
                           {topic.difficulty === 'beginner' && '🌱'}
                           {topic.difficulty === 'intermediate' && '⚡'}
                           {topic.difficulty === 'advanced' && '🔥'} {topic.difficulty}
                         </span>
-                        <div className="flex items-center gap-1.5 text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs">
-                          <Clock className="w-3 h-3" />
+                        <div className="flex items-center gap-1.5 text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs whitespace-nowrap">
+                          <Clock className="w-3 h-3 flex-shrink-0" />
                           <span>{topic.estimatedTime}m</span>
                         </div>
                       </div>
 
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 leading-tight line-clamp-2">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 leading-tight break-words">
                         {topic.title}
                       </h3>
                       
-                      <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 leading-relaxed flex-grow line-clamp-3">
+                      <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 leading-relaxed flex-grow overflow-y-auto">
                         {topic.description}
                       </p>
 
