@@ -16,7 +16,7 @@ import { Toast } from '../ui/Toast';
 import { LoadingSpinner } from '../animations/LoadingSpinner';
 import { TypingIndicator } from '../animations/TypingIndicator';
 import { ConfettiAnimation } from '../animations/ConfettiAnimation';
-import { onSnapshot, doc, updateDoc, deleteDoc, increment, getDoc } from 'firebase/firestore';
+import { onSnapshot, doc, updateDoc, deleteDoc, increment, getDoc, runTransaction } from 'firebase/firestore';
 import { firestore } from '../../lib/firebase';
 import { 
   Zap, 
@@ -107,6 +107,8 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
   const [aiArgumentsInRound, setAiArgumentsInRound] = useState(0);
   const [hasEndedDueToRounds, setHasEndedDueToRounds] = useState(false);
   const [hasEndedDueToTimeout, setHasEndedDueToTimeout] = useState(false);
+  // Add a local state to prevent double endDebate
+  const [hasSubmittedEnd, setHasSubmittedEnd] = useState(false);
 
   // Helper: Convert Blob to base64 (if needed)
   const blobToBase64 = (blob: Blob): Promise<string> => {
@@ -285,26 +287,27 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
     setPracticeTimeLeft(timeoutSeconds); // Already in seconds
   }, [isMyTurn, isPracticeMode, practiceSettings]);
 
-  // Track rounds and auto-submit when complete
+  // Track rounds and end debate when complete
   useEffect(() => {
-    if (!isPracticeMode || !practiceSettings || !currentDebate) return;
+    if (!isPracticeMode || !practiceSettings || !currentDebate || !currentUser) return;
 
-    const userArgs = currentDebate.arguments?.filter(arg => arg.userId === currentUser?.uid).length || 0;
-    const aiArgs = currentDebate.arguments?.filter(arg => arg.userId === 'ai_opponent').length || 0;
+    // Calculate current round based on number of arguments
+    // Each round = 1 user argument + 1 AI argument
+    const totalArgs = currentDebate.arguments?.length || 0;
+    const completedRounds = Math.floor(totalArgs / 2);
+    const currentRound = Math.min(completedRounds + 1, practiceSettings.numberOfRounds);
     
-    setUserArgumentsInRound(userArgs);
-    setAiArgumentsInRound(aiArgs);
+    setCurrentRound(currentRound);
+
+    // End debate if we've completed all rounds (both user and AI have gone)
+    const allRoundsCompleted = completedRounds >= practiceSettings.numberOfRounds;
     
-    // Calculate current round (each round = 1 user + 1 AI argument)
-    const completedRounds = Math.min(userArgs, aiArgs);
-    setCurrentRound(completedRounds + 1);
-    
-    // Check if we've reached the maximum number of rounds
-    if (completedRounds >= practiceSettings.numberOfRounds && !hasHandledRoundsComplete) {
+    if (allRoundsCompleted && !hasHandledRoundsComplete) {
+      console.log(`[DEBUG] All rounds completed. Total arguments: ${totalArgs}, Rounds: ${completedRounds}/${practiceSettings.numberOfRounds}`);
       setHasHandledRoundsComplete(true);
       handleRoundsComplete();
     }
-  }, [currentDebate?.arguments, isPracticeMode, practiceSettings, currentUser, hasHandledRoundsComplete]);
+  }, [currentDebate, isPracticeMode, practiceSettings, currentUser, hasHandledRoundsComplete]);
 
   // Handle timeout end
   const handleTimeoutEnd = async () => {
@@ -459,38 +462,45 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
       isPracticeMode &&
       currentDebate?.isPractice &&
       currentDebate.currentTurn === 'ai_opponent' &&
-      currentDebate.status === 'active'
+      currentDebate.status === 'active' &&
+      !isAITyping
     ) {
       const lastArg = currentDebate.arguments[currentDebate.arguments.length - 1];
       
       // Case 1: AI should respond to user's argument
-      if (
-        lastArg &&
-        lastArg.userId !== 'ai_opponent' &&
-        lastAIGeneratedArgumentId !== lastArg.id
-      ) {
-        setLastAIGeneratedArgumentId(lastArg.id);
-        setIsAITyping(true); // AI is about to respond
-        // Prepare the full transcript for Gemini
-        const transcript = currentDebate.arguments.map(arg => {
-          const participant = currentDebate.participants.find(p => p.userId === arg.userId);
-          return `${participant?.displayName || arg.userId} (${participant?.stance?.toUpperCase() || ''}): ${arg.content}`;
-        }).join('\n');
-        console.log('[DEBUG] AI transcript for Gemini:', transcript);
-        generateAIResponseWithTranscript(transcript).finally(() => setIsAITyping(false));
+      if (lastArg && lastArg.userId !== 'ai_opponent') {
+        // Only respond if we haven't already processed this argument
+        if (lastAIGeneratedArgumentId !== lastArg.id) {
+          console.log(`[DEBUG] AI turn detected - responding to user's argument in round ${currentDebate.currentRound}`);
+          setLastAIGeneratedArgumentId(lastArg.id);
+          setIsAITyping(true);
+          
+          // Prepare the full transcript for Gemini
+          const transcript = currentDebate.arguments.map(arg => {
+            const participant = currentDebate.participants.find(p => p.userId === arg.userId);
+            return `${participant?.displayName || arg.userId} (${participant?.stance?.toUpperCase() || ''}): ${arg.content}`;
+          }).join('\n');
+          
+          console.log('[DEBUG] AI transcript for Gemini:', transcript);
+          generateAIResponseWithTranscript(transcript)
+            .catch(error => console.error('[DEBUG] Error generating AI response:', error))
+            .finally(() => {
+              console.log('[DEBUG] AI response generation completed');
+              setIsAITyping(false);
+            });
+        }
       }
-      
       // Case 2: AI should start the debate (no arguments yet)
-      else if (
-        currentDebate.arguments.length === 0 &&
-        !isAITyping &&
-        !lastAIGeneratedArgumentId
-      ) {
+      else if (currentDebate.arguments.length === 0 && !lastAIGeneratedArgumentId) {
         console.log('[DEBUG] AI starting the debate - no arguments yet');
         setIsAITyping(true);
         // Generate opening argument for AI
-        const openingPrompt = `You are debating as the ${aiParticipant?.stance?.toUpperCase() || 'PRO'} side. Topic: ${currentDebate.topic}\n\nStart the debate with a strong opening argument.`;
-        generateAIResponseWithTranscript('').finally(() => setIsAITyping(false));
+        generateAIResponseWithTranscript('')
+          .catch(error => console.error('[DEBUG] Error generating AI opening:', error))
+          .finally(() => {
+            console.log('[DEBUG] AI opening generation completed');
+            setIsAITyping(false);
+          });
       }
     }
   }, [currentDebate?.arguments, isPracticeMode, currentDebate?.currentTurn, currentDebate?.status, lastAIGeneratedArgumentId, isAITyping]);
@@ -506,9 +516,11 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
   // Handle debate end
   const handleEndDebate = async () => {
     if (!currentDebate || !debateId || !practiceSettings) return;
+    if (currentDebate.status === 'completed' || hasSubmittedEnd) return;
+    setHasSubmittedEnd(true);
     setIsJudging(true);
     try {
-      let judgment;
+      let judgment: any;
       if (practiceSettings.aiProvider === 'gemini') {
         judgment = await geminiService.judgeDebate(
           currentDebate.topic,
@@ -536,53 +548,13 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
       }
       console.log('[DEBUG] Submitting judgment to Firestore:', judgment);
       await endDebate(debateId, judgment); // Only Firestore update triggers UI
-      // Do NOT setShowJudgment(true) here
-      // In handleEndDebate, after updating the debate and judgment, update user stats for the human user only
-      if (currentDebate && currentUser) {
-        const userRef = doc(firestore, 'users', currentUser.uid);
-        let statsUpdate: any = {};
-        // Determine result
-        let isDraw = false;
-        let isWin = false;
-        let isLoss = false;
-        if (judgment && judgment.winner) {
-          if (judgment.winner === 'Draw' || judgment.winner === 'draw') {
-            isDraw = true;
-          } else if (judgment.winner === currentUser.uid) {
-            isWin = true;
-          } else {
-            isLoss = true;
-          }
-        }
-        if (isDraw) {
-          statsUpdate = {
-            draws: increment(1),
-            gamesPlayed: increment(1)
-          };
-        } else if (isWin) {
-          statsUpdate = {
-            wins: increment(1),
-            gamesPlayed: increment(1)
-          };
-        } else if (isLoss) {
-          statsUpdate = {
-            losses: increment(1),
-            gamesPlayed: increment(1)
-          };
-        }
-        await updateDoc(userRef, statsUpdate);
-        // Recalculate win_rate after update
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          const wins = userData.wins || 0;
-          const gamesPlayed = userData.gamesPlayed || 0;
-          const win_rate = gamesPlayed > 0 ? wins / gamesPlayed : 0;
-          await updateDoc(userRef, { win_rate });
-        }
-      }
+      await updateDoc(doc(firestore, 'debates', debateId), {
+        mode: isPracticeMode ? 'practice' : 'live',
+        endedBy: currentUser?.uid || ''
+      });
+      console.log('[DEBUG] AI judgment saved to Firestore:', judgment);
     } catch (error) {
-      console.error('Failed to end debate:', error);
+      console.error('[DEBUG] Failed to end debate:', error);
     } finally {
       setIsJudging(false);
     }
@@ -600,6 +572,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
   const [judgmentResult, setJudgmentResult] = useState<any>(null);
   const handleExitDebate = async () => {
     if (!currentDebate || !debateId) return;
+    if (currentDebate.status === 'completed') return;
     try {
       console.log('[DEBUG] Exiting debate and requesting AI judgment:', debateId);
       // Prepare transcript for judging

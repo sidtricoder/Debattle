@@ -3,16 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { Github, Linkedin, Mail, Award, Shield, Users, Zap, Trophy, Brain, Sparkles, Globe, BarChart2, MessageSquare, Clock, CheckCircle } from 'lucide-react';
+import { MessageCircle, Linkedin, Mail, Award, Shield, Users, Zap, Trophy, Brain, Sparkles, Globe, BarChart2, MessageSquare, Clock, CheckCircle } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 
-
-const stats = [
-  { value: '10,000+', label: 'Active Users', icon: Users },
-  { value: '50+', label: 'Countries', icon: Globe },
-  { value: '1M+', label: 'Debates Hosted', icon: MessageSquare },
-  { value: '95%', label: 'Satisfaction Rate', icon: CheckCircle }
-];
 
 const features = [
   {
@@ -90,30 +83,6 @@ const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-secondary/5 dark:bg-gray-900">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
-                className="text-center p-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
-                  <stat.icon className="w-6 h-6 text-primary" />
-                </div>
-                <div className="text-3xl font-bold mb-1">{stat.value}</div>
-                <div className="text-sm text-secondary dark:text-gray-400">{stat.label}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <main className="flex-1 container mx-auto px-4 py-16">
         {/* Mission & Vision */}
         <section className="mb-20">
@@ -156,50 +125,6 @@ const AboutPage: React.FC = () => {
                 <p className="text-secondary dark:text-gray-300">{feature.description}</p>
               </motion.div>
             ))}
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="bg-gradient-to-r from-primary to-accent rounded-2xl p-8 md:p-12 text-white mb-20">
-          <div className="max-w-3xl mx-auto text-center">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="text-2xl md:text-3xl font-bold mb-4"
-            >
-              Ready to Join the Debate?
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-              className="text-lg mb-8 text-primary-100"
-            >
-              Join thousands of critical thinkers and start improving your debate skills today.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
-            >
-              <button
-                onClick={signInWithGoogle}
-                className="px-6 py-3 bg-white text-primary hover:bg-gray-100 rounded-lg font-medium transition-colors"
-              >
-                Get Started for Free
-              </button>
-              <Link
-                to="/features"
-                className="px-6 py-3 border border-white/20 hover:bg-white/10 rounded-lg font-medium transition-colors"
-              >
-                Learn More
-              </Link>
-            </motion.div>
           </div>
         </section>
 
@@ -251,125 +176,62 @@ const AboutPage: React.FC = () => {
             ))}
           </div>
         </section>
-
-        {/* Final CTA */}
-        <section className="text-center py-16">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-3xl md:text-4xl font-bold mb-6"
-          >
-            Ready to Start Debating?
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-            className="text-lg text-secondary dark:text-gray-300 mb-8 max-w-2xl mx-auto"
-          >
-            Join thousands of debaters who are already improving their skills on our platform.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
-          >
-            <button
-              onClick={signInWithGoogle}
-              className="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors"
-            >
-              Get Started for Free
-            </button>
-            <Link
-              to="/features"
-              className="px-6 py-3 border border-primary text-primary hover:bg-primary/5 rounded-lg font-medium transition-colors"
-            >
-              Learn More
-            </Link>
-          </motion.div>
-        </section>
       </main>
       
       {/* Meet the Developer Section */}
       <section className="bg-secondary/5 dark:bg-gray-900 py-16">
         <div className="container mx-auto px-4">
           <motion.div 
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden max-w-5xl mx-auto"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden max-w-3xl mx-auto"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <div className="flex flex-col md:flex-row">
-              {/* Developer Image */}
-              <div className="md:w-1/2 bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                <img 
-                  src="/me.png" 
-                  alt="Sid - Developer" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
+            <div className="p-8 md:p-12">
+              <motion.h2 
+                className="text-3xl font-bold mb-4 text-gray-900 dark:text-white"
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+              >
+                Meet the Developer
+              </motion.h2>
               
-              {/* Developer Info */}
-              <div className="md:w-1/2 p-8 md:p-12">
-                <motion.h2 
-                  className="text-3xl font-bold mb-4 text-gray-900 dark:text-white"
-                  initial={{ opacity: 0, x: 20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.2, duration: 0.5 }}
-                >
-                  Meet the Developer
-                </motion.h2>
+              <motion.div 
+                className="prose prose-gray dark:prose-invert max-w-none"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+              >
+                <p className="text-lg mb-4">
+                  Hello! I'm Sid, the creator of Debattle. I'm passionate about building impactful, user-friendly web applications that empower people to learn, grow, and connect through meaningful discussions.
+                </p>
+                <p className="mb-6">
+                  With a background in both technology and debate, I wanted to create a platform that combines the best of both worlds - leveraging AI to help people improve their critical thinking and communication skills in a fun, engaging way.
+                </p>
                 
-                <motion.div 
-                  className="prose prose-gray dark:prose-invert max-w-none"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.3, duration: 0.5 }}
-                >
-                  <p className="text-lg mb-4">
-                    Hello! I'm Sid, the creator of Debattle. I'm passionate about building impactful, user-friendly web applications that empower people to learn, grow, and connect through meaningful discussions.
-                  </p>
-                  <p className="mb-6">
-                    With a background in both technology and debate, I wanted to create a platform that combines the best of both worlds - leveraging AI to help people improve their critical thinking and communication skills in a fun, engaging way.
-                  </p>
-                  
-                  <div className="flex space-x-4 mt-8">
-                    <a 
-                      href="https://github.com/sidtricoder/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
-                      aria-label="GitHub"
-                    >
-                      <Github className="w-5 h-5" />
-                    </a>
-                    <a 
-                      href="https://www.linkedin.com/in/siddharth-brijesh-tripathi/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
-                      aria-label="LinkedIn"
-                    >
-                      <Linkedin className="w-5 h-5" />
-                    </a>
-                    <a 
-                      href="mailto:sid.dev.2006@gmail.com" 
-                      className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
-                      aria-label="Email"
-                    >
-                      <Mail className="w-5 h-5" />
-                    </a>
-                  </div>
-                </motion.div>
-              </div>
+                <div className="flex space-x-4 mt-8">
+                  <a 
+                    href="https://www.linkedin.com/in/siddharth-brijesh-tripathi/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
+                    aria-label="LinkedIn"
+                  >
+                    <Linkedin className="w-5 h-5" />
+                  </a>
+                  <a 
+                    href="mailto:sid.dev.2006@gmail.com" 
+                    className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
+                    aria-label="Email"
+                  >
+                    <Mail className="w-5 h-5" />
+                  </a>
+                </div>
+              </motion.div>
             </div>
           </motion.div>
         </div>

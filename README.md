@@ -59,8 +59,9 @@ A modern, real-time debate platform built with React 19, TypeScript, and Vite. C
 ### Prerequisites
 - Node.js 18+ 
 - npm or yarn
-- Firebase account
+- Firebase account(Flame is enough)
 - Google Gemini API key
+- Groq API key
 
 ### Setup Instructions
 
@@ -79,21 +80,42 @@ A modern, real-time debate platform built with React 19, TypeScript, and Vite. C
    Create a `.env` file in the root directory:
    ```env
    # Firebase Configuration
-   VITE_FIREBASE_API_KEY=your_firebase_api_key
-   VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-   VITE_FIREBASE_PROJECT_ID=your_project_id
-   VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   VITE_FIREBASE_APP_ID=your_app_id
-   VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+   VITE_FIREBASE_API_KEY
+   VITE_FIREBASE_AUTH_DOMAIN
+   VITE_FIREBASE_PROJECT_ID
+   VITE_FIREBASE_STORAGE_BUCKET
+   VITE_FIREBASE_MESSAGING_SENDER_ID
+   VITE_FIREBASE_APP_ID
+   VITE_FIREBASE_MEASUREMENT_ID
+   VITE_USE_FIREBASE_AUTH=true
 
    # Google Gemini API
-   VITE_GEMINI_API_KEY=your_gemini_api_key
+   VITE_GEMINI_API_KEY
+   VITE_DEEPSEEK_API_KEY
+   VITE_GROQ_API_KEY
 
-   # App Configuration
-   VITE_APP_TITLE=Debattle
-   VITE_APP_VERSION=1.0.0
-   VITE_APP_ENVIRONMENT=development
+   # Vite Configuration
+   VITE_APP_TITLE
+   VITE_APP_VERSION
+   VITE_APP_ENVIRONMENT
+
+   # Feature Flags
+   VITE_ENABLE_TOURNAMENTS
+   VITE_ENABLE_SPECTATOR_MODE
+   VITE_ENABLE_VOICE_CHAT
+   VITE_ENABLE_VIDEO_CHAT
+   VITE_ENABLE_AI_JUDGING
+
+   # Limits
+   VITE_MAX_DEBATE_TIME
+   VITE_MAX_ARGUMENT_LENGTH
+   VITE_MAX_SPECTATORS
+   VITE_MAX_FRIENDS
+
+   # Development
+   VITE_DEBUG_MODE
+   VITE_LOG_LEVEL
+
    ```
 
 4. **Firebase Setup**
@@ -103,7 +125,7 @@ A modern, real-time debate platform built with React 19, TypeScript, and Vite. C
    - Update the Firebase configuration in your `.env` file
 
 5. **Google Gemini API**
-   - Get an API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - Get an API key from [Google AI Studio](https://ai.google.dev/)
    - Add it to your `.env` file
 
 6. **Run the development server**
@@ -232,10 +254,6 @@ npm run type-check   # Run TypeScript type checking
 - Update documentation as needed
 - Ensure mobile responsiveness
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 🙏 Acknowledgments
 
 - [React](https://reactjs.org/) - UI library
@@ -248,31 +266,31 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Documentation**: [docs.debattle.com](https://docs.debattle.com)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/debattle/issues)
+- **Issues**: [GitHub Issues](https://github.com/sidtricoder/debattle/issues)
 - **Discord**: [Join our community](https://discord.gg/debattle)
-- **Email**: support@debattle.com
+- **Email**: sid.dev.2006@gmail.com
 
 ## 🔮 Roadmap
 
-### Phase 1 (Current)
+### Phase 1 (Started)
 - ✅ Basic debate interface
 - ✅ User authentication
 - ✅ Leaderboard system
 - ✅ Practice mode
 
-### Phase 2 (Next)
-- 🔄 Real-time debate rooms
-- 🔄 AI judging integration
-- 🔄 Tournament system
-- 🔄 Spectator mode
+### Phase 2 (Current)
+- ✅ Real-time debate rooms
+- ✅ AI judging integration
+- ✅ Custom User vs User debates
+- ✅ Spectator and Voting mode
 
-### Phase 3 (Future)
-- 📋 Voice/video debates
-- 📋 Advanced analytics
-- 📋 Mobile app
-- 📋 API for third-party integrations
+### Phase 3 (Coming soon...)
+- 🔄 Voice/video debates
+- 🔄 Advanced analytics
+- 🔄 Mobile app
+- 🔄 API for third-party integrations
+- 🔄 Custom debate analysis model
 
 ---
 
-**Made with ❤️ by the Debattle Team**
+**Made with ❤️ by Sid**

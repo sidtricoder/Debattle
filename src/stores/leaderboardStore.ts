@@ -100,7 +100,7 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
           wins: userData.wins || 0,
           losses: userData.losses || 0,
           winRate: calculateWinRate(userData.wins || 0, userData.losses || 0),
-          streak: userData.winStreak || 0,
+          streak: userData.streak || 0,
           lastActive: userData.lastActive || Date.now(),
           region: userData.region || 'Global',
           category: userData.preferredCategory || 'general'
@@ -179,7 +179,7 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
         wins: userData.wins || 0,
         losses: userData.losses || 0,
         winRate: calculateWinRate(userData.wins || 0, userData.losses || 0),
-        streak: userData.winStreak || 0,
+        streak: userData.streak || 0,
         lastActive: userData.lastActive || Date.now(),
         region: userData.region || 'Global',
         category: userData.preferredCategory || 'general'

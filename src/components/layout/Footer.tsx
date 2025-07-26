@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { 
-  Github, 
+  MessageCircle, 
   Twitter, 
   Linkedin, 
   Mail, 
@@ -31,8 +31,6 @@ const Footer: React.FC = () => {
   };
 
   const socialLinks = [
-    { name: 'GitHub', href: 'https://github.com/sidtricoder/', icon: Github },
-    // { name: 'Twitter', href: 'https://twitter.com', icon: Twitter },
     { name: 'LinkedIn', href: 'https://www.linkedin.com/in/siddharth-brijesh-tripathi/', icon: Linkedin },
     { name: 'Email', href: 'mailto:sid.dev.2006@gmail.com', icon: Mail }
   ];

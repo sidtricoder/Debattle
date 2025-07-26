@@ -16,7 +16,10 @@ import {
   onSnapshot,
   addDoc,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  runTransaction,
+  increment,
+  arrayUnion
 } from 'firebase/firestore';
 
 export interface DebateParticipant {
@@ -120,10 +123,9 @@ interface DebateState {
   // History
   loadDebateHistory: (userId: string) => Promise<void>;
   getDebateById: (debateId: string) => Promise<Debate | null>;
-  
-  // Real-time simulation
   simulateTyping: (debateId: string, userId: string, isTyping: boolean) => Promise<void>;
   simulatePresence: (debateId: string, userId: string, isOnline: boolean) => Promise<void>;
+  incrementTopicUsage: (topicTitle: string) => Promise<boolean>;
 }
 
 export const useDebateStore = create<DebateState>((set, get) => ({
@@ -133,9 +135,43 @@ export const useDebateStore = create<DebateState>((set, get) => ({
   isLoading: false,
   error: null,
 
+  incrementTopicUsage: async (topicTitle: string) => {
+    try {
+      // Find the topic by title (case insensitive)
+      const topicsQuery = query(
+        collection(firestore, 'topics'),
+        where('title', '>=', topicTitle),
+        where('title', '<=', topicTitle + '\uf8ff'),
+        limit(1)
+      );
+      
+      const querySnapshot = await getDocs(topicsQuery);
+      
+      if (!querySnapshot.empty) {
+        const topicDoc = querySnapshot.docs[0];
+        const topicRef = doc(firestore, 'topics', topicDoc.id);
+        
+        // Use increment to atomically update the usageCount
+        await updateDoc(topicRef, {
+          usageCount: increment(1)
+        });
+        
+        console.log(`Incremented usage count for topic: ${topicTitle}`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error incrementing topic usage:', error);
+      return false;
+    }
+  },
+
   createDebate: async (topic, category, difficulty) => {
     set({ isLoading: true, error: null });
     try {
+      // Increment the topic's usage count
+      await get().incrementTopicUsage(topic);
+      
       const debateData = {
         topic,
         category,
@@ -202,33 +238,30 @@ export const useDebateStore = create<DebateState>((set, get) => ({
       
       const debate = debateDoc.data() as Debate;
       
-      // Check if user is already in the debate
-      if (debate.participants.some(p => p.userId === userId)) {
-        set({ isLoading: false });
-        return;
-      }
-      
-      // Get user's display name from Firestore if not AI
+      // Get user's display name and rating from Firestore if not AI
       let displayName = `User ${userId.slice(-4)}`; // Default fallback
+      let rating = 1000; // Default fallback
       if (userId !== 'ai_opponent') {
         try {
           const userDoc = await getDoc(doc(firestore, 'users', userId));
           if (userDoc.exists()) {
             const userData = userDoc.data();
             displayName = userData.displayName || userData.username || `User ${userId.slice(-4)}`;
+            rating = userData.rating || 1000;
           }
         } catch (error) {
-          console.warn('Failed to fetch user display name:', error);
+          console.warn('Failed to fetch user display name or rating:', error);
           displayName = `User ${userId.slice(-4)}`;
         }
       } else {
         displayName = 'AI Opponent';
+        rating = 1200;
       }
       
       const participant: DebateParticipant = {
         userId,
         displayName,
-        rating: 1000,
+        rating,
         stance,
         isOnline: true,
         isTyping: false,
@@ -236,34 +269,39 @@ export const useDebateStore = create<DebateState>((set, get) => ({
       };
 
       const currentTime = Date.now();
-      let newParticipants = [...debate.participants, participant];
+      // Always update participant info
+      let newParticipants = debate.participants.filter(p => p.userId !== userId);
+      newParticipants.push(participant);
       let newStatus = debate.status;
-      // Practice mode: if both user and AI are present, set status to 'active'
       if (debate.isPractice && newParticipants.some(p => p.userId === 'ai_opponent') && newParticipants.length >= 2) {
         newStatus = 'active';
-        console.log('[DEBUG] joinDebate: Practice mode, setting status to active');
       } else if (newParticipants.length === 2) {
         newStatus = 'active';
       }
 
       const newParticipantIds = newParticipants.map(p => p.userId);
+      let newCurrentTurn = debate.currentTurn;
+      if (newParticipants.length === 2) {
+        const proParticipant = newParticipants.find(p => p.stance === 'pro');
+        if (proParticipant) {
+          newCurrentTurn = proParticipant.userId;
+        }
+      } else if (debate.participants.length === 0) {
+        newCurrentTurn = userId;
+      }
+
       const updatedDebate: any = {
         ...debate,
         participants: newParticipants,
         participantIds: newParticipantIds,
         status: newStatus,
-        currentTurn: debate.participants.length === 0 ? userId : debate.currentTurn
+        currentTurn: newCurrentTurn
       };
       
-      // Only set startedAt if we're starting the debate and have a valid timestamp
       if (debate.participants.length === 1 && currentTime && typeof currentTime === 'number' && !isNaN(currentTime)) {
         updatedDebate.startedAt = currentTime;
-        console.log('Setting startedAt in joinDebate:', currentTime);
-      } else {
-        console.log('Not setting startedAt - participants length:', debate.participants.length, 'currentTime:', currentTime);
       }
 
-      console.log('joinDebate update data:', updatedDebate);
       await updateDoc(debateRef, updatedDebate);
       
       set(state => ({
@@ -332,21 +370,35 @@ export const useDebateStore = create<DebateState>((set, get) => ({
         wordCount: content.split(' ').length
       };
 
-      // Practice mode logic: alternate turns between user and AI
+      // Practice mode logic: alternate turns between user and AI and update rounds
       let nextTurn = debate.participants.find(p => p.userId !== userId)?.userId || '';
-      let nextRound = debate.arguments.length % 2 === 0 ? debate.currentRound + 1 : debate.currentRound;
-      if (debate.isPractice && debate.participants.some(p => p.userId === 'ai_opponent')) {
+      let nextRound = debate.currentRound;
+      const maxRounds = debate.practiceSettings?.numberOfRounds || 3;
+      
+      // In practice mode, manage turns and rounds
+      if (debate.isPractice) {
         if (userId !== 'ai_opponent') {
-          // User just submitted, now it's AI's turn
+          // User just submitted, it's the AI's turn
           nextTurn = 'ai_opponent';
-          console.log('[DEBUG] Practice mode: switching turn to ai_opponent');
+          
+          // If this was the last round and user just submitted, end the debate
+          if (debate.currentRound >= maxRounds) {
+            console.log(`[DEBUG] Final round completed. Preparing to end debate.`);
+            // The debate will be ended by the component based on total arguments
+          }
         } else {
-          // AI just submitted, now it's user's turn
+          // AI just submitted, it's the user's turn
           const realUser = debate.participants.find(p => p.userId !== 'ai_opponent');
           nextTurn = realUser?.userId || '';
-          nextRound = debate.currentRound + 1;
-          console.log('[DEBUG] Practice mode: switching turn to user', nextTurn);
+          
+          // Increment round after both have gone (when AI is done)
+          // But only if we haven't reached max rounds
+          if (debate.currentRound < maxRounds) {
+            nextRound = debate.currentRound + 1;
+            console.log(`[DEBUG] Round incremented to: ${nextRound}`);
+          }
         }
+        console.log(`[DEBUG] Turn switched to: ${nextTurn}, current round: ${nextRound}/${maxRounds}`);
       }
 
       const updatedDebate = {
@@ -459,7 +511,117 @@ export const useDebateStore = create<DebateState>((set, get) => ({
       
       console.log('[DEBUG] endDebate: updatedDebate', updatedDebate);
       await updateDoc(debateRef, updatedDebate);
-      
+
+      // Update user stats for all participants
+      if (debate.participants && Array.isArray(debate.participants)) {
+        for (const participant of debate.participants) {
+          const userRef = doc(firestore, 'users', participant.userId);
+          await runTransaction(firestore, async (transaction) => {
+            const userSnap = await transaction.get(userRef);
+            if (!userSnap.exists()) return;
+            const userData = userSnap.data();
+            let wins = userData.wins || 0;
+            let losses = userData.losses || 0;
+            let draws = userData.draws || 0;
+            let gamesPlayed = userData.gamesPlayed || 0;
+            let rating = userData.rating || 1200;
+            // Determine result for this participant
+            let isDraw = false;
+            let isWin = false;
+            let isLoss = false;
+            let winnerId = judgment && judgment.winner;
+            // Patch: If winnerId is a displayName, map to userId
+            if (winnerId && !debate.participants.some(p => p.userId === winnerId)) {
+              const match = debate.participants.find(p => p.displayName === winnerId);
+              if (match) winnerId = match.userId;
+            }
+            if (judgment && winnerId) {
+              if (winnerId === 'Draw' || winnerId === 'draw') {
+                isDraw = true;
+              } else if (winnerId === participant.userId) {
+                isWin = true;
+              } else {
+                isLoss = true;
+              }
+            }
+            if (isDraw) {
+              draws += 1;
+              gamesPlayed += 1;
+            } else if (isWin) {
+              wins += 1;
+              gamesPlayed += 1;
+            } else if (isLoss) {
+              losses += 1;
+              gamesPlayed += 1;
+            }
+            // Update rating if available
+            if (updatedDebate.ratings && updatedDebate.ratings[participant.userId] !== undefined) {
+              rating = updatedDebate.ratings[participant.userId];
+            }
+            // Calculate win_rate
+            const win_rate = gamesPlayed > 0 ? wins / gamesPlayed : 0;
+            // Optionally, set provisionalRating to false after 5 games
+            let provisionalRating = userData.provisionalRating;
+            if (gamesPlayed >= 5) provisionalRating = false;
+            
+            // Prepare the update object
+            const updateData: any = {
+              wins,
+              losses,
+              draws,
+              gamesPlayed,
+              win_rate,
+              rating,
+              last_active: new Date(),
+              updated_at: new Date(),
+              provisionalRating
+            };
+
+            // Update practice stats if this is a practice debate
+            if (debate.isPractice) {
+              // Use increment operations for atomic updates
+              updateData.practiceSessions = increment(1);
+              
+              // Calculate practice time in minutes and increment
+              const debateDuration = Math.round((endTime - startTime) / (1000 * 60));
+              updateData.practiceTime = increment(debateDuration);
+              
+              // Handle average score update
+              if (judgment?.scores?.[participant.userId] !== undefined || judgment?.scores?.[participant.displayName] !== undefined) {
+                const currentScore = judgment.scores?.[participant.userId] || judgment.scores?.[participant.displayName];
+                if (typeof currentScore === 'number') {
+                  // Calculate new average score
+                  const currentTotal = (userData.practiceAvgScore || 0) * (userData.practiceSessions || 0);
+                  const newTotal = currentTotal + currentScore;
+                  const newAverage = newTotal / ((userData.practiceSessions || 0) + 1);
+                  updateData.practiceAvgScore = parseFloat(newAverage.toFixed(2));
+                }
+              } else {
+                // Keep existing average score if no new score
+                updateData.practiceAvgScore = userData.practiceAvgScore || 0;
+              }
+              
+              // Update rating gain if there are rating changes
+              if (updatedDebate.ratingChanges?.[participant.userId] !== undefined) {
+                updateData.practiceRatingGain = increment(updatedDebate.ratingChanges[participant.userId]);
+              } else {
+                // If no rating change, ensure we don't overwrite existing value
+                updateData.practiceRatingGain = userData.practiceRatingGain || 0;
+              }
+            } else {
+              // If not a practice debate, keep existing practice stats
+              updateData.practiceSessions = userData.practiceSessions || 0;
+              updateData.practiceTime = userData.practiceTime || 0;
+              updateData.practiceAvgScore = userData.practiceAvgScore || 0;
+              updateData.practiceRatingGain = userData.practiceRatingGain || 0;
+            }
+
+            // Apply all updates in a single transaction
+            transaction.update(userRef, updateData);
+          });
+        }
+      }
+
       // Refresh user data to sync with Firebase
       try {
         const { refreshUserData } = useAuthStore.getState();

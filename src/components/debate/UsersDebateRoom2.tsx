@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { onSnapshot, doc, updateDoc, arrayUnion, getDoc, increment, runTransaction } from 'firebase/firestore';
 import { firestore } from '../../lib/firebase';
 import { useAuthStore } from '../../stores/authStore';
+import { useDebateStore } from '../../stores/debateStore';
 import { judgeWithGroq } from '../../services/ai/deepseek';
 import { calculateDebateRatings } from '../../services/debate/elo-calculator';
 
@@ -25,8 +26,9 @@ import {
 } from 'lucide-react';
 
 // Constants for user vs user debates
-const MAX_ROUNDS = 5;
-const TURN_TIME_SECONDS = 60;
+// Remove hardcoded constants
+// const MAX_ROUNDS = 5;
+// const TURN_TIME_SECONDS = 60;
 
 interface DebateArgument {
   id: string;
@@ -57,18 +59,30 @@ interface Debate {
   createdAt: Date;
   proVotes?: number;
   conVotes?: number;
+  customSettings?: {
+    rounds?: number;
+    timePerUser?: number;
+    aiModel?: string;
+    userStance?: 'pro' | 'con';
+  };
 }
 
 export const UsersDebateRoom: React.FC = () => {
-  const { roomId } = useParams<{ roomId: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: currentUser, refreshUserData } = useAuthStore();
+  const { joinDebate } = useDebateStore();
   
   // State
   const [debate, setDebate] = useState<Debate | null>(null);
   const [argument, setArgument] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(TURN_TIME_SECONDS);
+  // Use customSettings for timer and rounds if present
+  const maxRounds = debate?.customSettings?.rounds || 5;
+  const turnTimeSeconds = debate?.customSettings?.timePerUser || 60;
+  const aiModel = debate?.customSettings?.aiModel || 'gemini';
+  const userStance = debate?.customSettings?.userStance || 'pro';
+  const [timeLeft, setTimeLeft] = useState(turnTimeSeconds);
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
   const [isJudging, setIsJudging] = useState(false);
   const [showJudgment, setShowJudgment] = useState(false);
@@ -144,19 +158,19 @@ export const UsersDebateRoom: React.FC = () => {
 
   // Subscribe to debate
   useEffect(() => {
-    if (!roomId) {
-      console.log('[DEBUG] UsersDebateRoom: No roomId provided');
+    if (!id) {
+      console.log('[DEBUG] UsersDebateRoom: No id provided');
       setError('No debate ID in URL.');
       setIsLoading(false);
       return;
     }
 
-    console.log('[DEBUG] UsersDebateRoom: Subscribing to debate with Firestore ID:', roomId);
+    console.log('[DEBUG] UsersDebateRoom: Subscribing to debate with Firestore ID:', id);
     setIsLoading(true);
     setError(null);
 
     const unsub = onSnapshot(
-      doc(firestore, 'debates', roomId),
+      doc(firestore, 'debates', id),
       (docSnap) => {
         console.log('[DEBUG] UsersDebateRoom: onSnapshot callback triggered');
         console.log('[DEBUG] UsersDebateRoom: docSnap.exists():', docSnap.exists());
@@ -186,7 +200,7 @@ export const UsersDebateRoom: React.FC = () => {
             setShowWinner(true);
           }
         } else {
-          console.error('[DEBUG] UsersDebateRoom: Debate not found in Firestore:', roomId);
+          console.error('[DEBUG] UsersDebateRoom: Debate not found in Firestore:', id);
           setError('Debate not found');
           setIsLoading(false);
         }
@@ -207,7 +221,7 @@ export const UsersDebateRoom: React.FC = () => {
       console.log('[DEBUG] UsersDebateRoom: Cleaning up subscription');
       unsub();
     };
-  }, [roomId]);
+  }, [id]);
 
   // Scroll to bottom on new message
   useEffect(() => {
@@ -306,6 +320,22 @@ export const UsersDebateRoom: React.FC = () => {
     startDebate();
   }, [debate, currentUser]);
 
+  // Auto-join debate on mount if not already a participant
+  useEffect(() => {
+    if (id && currentUser && debate) {
+      const alreadyParticipant = debate.participants.some(p => p.userId === currentUser.uid);
+      if (!alreadyParticipant) {
+        // Assign stance: if pro is taken, join as con; else join as pro
+        const proTaken = debate.participants.some(p => p.stance === 'pro');
+        const stance = proTaken ? 'con' : 'pro';
+        console.log(`[DEBUG] Attempting to join debate ${id} as ${stance} (${currentUser.uid})`);
+        joinDebate(id, currentUser.uid, stance)
+          .then(() => console.log('[DEBUG] joinDebate successful'))
+          .catch(err => console.error('Failed to join debate:', err));
+      }
+    }
+  }, [id, currentUser, debate]);
+
   // Determine if it's my turn
   useEffect(() => {
     if (!debate || !currentUser) return;
@@ -319,7 +349,7 @@ export const UsersDebateRoom: React.FC = () => {
   // Timer logic
   useEffect(() => {
     if (!isMyTurn || !debate || debate.status !== 'active') return;
-    setTimeLeft(TURN_TIME_SECONDS);
+    setTimeLeft(turnTimeSeconds);
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
@@ -328,7 +358,7 @@ export const UsersDebateRoom: React.FC = () => {
           handleAutoSubmit();
           
           // If this was the last round, end the debate
-          if (debate.currentRound > MAX_ROUNDS) {
+          if (debate.currentRound > maxRounds) {
             console.log('[DEBUG] UsersDebateRoom: Timer expired on last round, ending debate');
             setTimeout(() => handleEndDebate(), 1000); // Small delay to allow auto-submit to complete
           }
@@ -341,8 +371,12 @@ export const UsersDebateRoom: React.FC = () => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isMyTurn, debate?.currentTurn, debate?.status]);
+  }, [isMyTurn, debate?.currentTurn, debate?.status, turnTimeSeconds]);
 
+  // Update timer when turnTimeSeconds or currentTurn changes
+  useEffect(() => {
+    setTimeLeft(turnTimeSeconds);
+  }, [turnTimeSeconds, debate?.currentTurn]);
 
 
   // Argument submission
@@ -370,7 +404,7 @@ export const UsersDebateRoom: React.FC = () => {
         updatedCurrentRound = debate.currentRound + 1;
       }
       // End debate after MAX_ROUNDS rounds (i.e., MAX_ROUNDS*2 arguments)
-      const shouldEnd = updatedCurrentRound > MAX_ROUNDS;
+      const shouldEnd = updatedCurrentRound > maxRounds;
       await updateDoc(doc(firestore, 'debates', debate.id), {
         arguments: updatedArguments,
         currentTurn: debate.participants.find(p => p.userId !== currentUser.uid)?.userId || '',
@@ -405,7 +439,7 @@ export const UsersDebateRoom: React.FC = () => {
       if (updatedArguments.length % 2 === 0) {
         updatedCurrentRound = debate.currentRound + 1;
       }
-      const isLastRound = updatedCurrentRound > MAX_ROUNDS;
+      const isLastRound = updatedCurrentRound > maxRounds;
       await updateDoc(doc(firestore, 'debates', debate.id), {
         arguments: updatedArguments,
         currentTurn: debate.participants.find(p => p.userId !== currentUser.uid)?.userId || '',
@@ -445,10 +479,12 @@ export const UsersDebateRoom: React.FC = () => {
       // Prepare prompt for judge
       const prompt = `You are an expert debate judge. Given the following debate, return ONLY a valid JSON object with these fields:\n{\n  "winner": "<userId of winner>",\n  "scores": {\n    "<userId1>": <score, float, 1 decimal>,\n    "<userId2>": <score, float, 1 decimal>\n  },\n  "feedback": {\n    "<userId1>": ["<feedback1>", ...],\n    "<userId2>": ["<feedback1>", ...]\n  },\n  "reasoning": "<reasoning>",\n  "highlights": ["<highlight1>", ...],\n  "learningPoints": ["<point1>", ...]\n}\nDo NOT use stance or displayName as keys. Use userId only.\nDebate data:\nTOPIC: ${debate.topic}\nPARTICIPANTS: ${debate.participants.map(p => `- ${p.displayName} (userId: ${p.userId}, stance: ${p.stance.toUpperCase()})`).join(' ')}\nARGUMENTS: ${debate.arguments.map(arg => `ROUND ${arg.round} - ${debate.participants.find(p => p.userId === arg.userId)?.displayName}: \"${arg.content}\"`).join(' ')}`;
 
-      // Get AI judgment
-      const response = await judgeWithGroq(prompt, 'llama-3.3-70b-versatile');
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      const judgment = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+        // Map aiModel to judgeWithGroq model string
+        const judgeModel = aiModel === 'llama' ? 'llama-3.3-70b-versatile' : aiModel === 'gemma' ? 'gemma2-9b-it' : 'llama-3.3-70b-versatile';
+        // Get AI judgment
+        const response = await judgeWithGroq(prompt, judgeModel);
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        const judgment = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
       
       // Get AI winner stance
       const aiWinnerId = judgment?.winner;
@@ -533,10 +569,10 @@ export const UsersDebateRoom: React.FC = () => {
       await updateDoc(doc(firestore, 'debates', debate.id), updatedDebate);
       setShowJudgment(true);
 
-      // Update user stats for all participants using ratings keys
-      if (ratings) {
-        for (const userId of Object.keys(ratings)) {
-          const userRef = doc(firestore, 'users', userId);
+      // Update user stats for all participants
+      if (debate && debate.participants && judgment) {
+        for (const participant of debate.participants) {
+          const userRef = doc(firestore, 'users', participant.userId);
           const userSnap = await getDoc(userRef);
           if (!userSnap.exists()) continue;
           const userData = userSnap.data();
@@ -544,9 +580,9 @@ export const UsersDebateRoom: React.FC = () => {
           let losses = userData.losses || 0;
           let draws = userData.draws || 0;
           let gamesPlayed = userData.gamesPlayed || 0;
-          // Determine result for this user
-          let isDraw = customJudgment.winner === 'Draw' || customJudgment.winner === 'draw';
-          let isWin = customJudgment.winner === userId;
+          // Determine result for this participant
+          let isDraw = judgment.winner === 'Draw' || judgment.winner === 'draw';
+          let isWin = judgment.winner === participant.userId;
           let isLoss = !isDraw && !isWin;
           if (isDraw) {
             draws += 1;
@@ -556,7 +592,8 @@ export const UsersDebateRoom: React.FC = () => {
             losses += 1;
           }
           gamesPlayed += 1;
-          let updateObj: any = {
+          // Only update stats, not rating
+          await updateDoc(userRef, {
             wins,
             losses,
             draws,
@@ -564,10 +601,8 @@ export const UsersDebateRoom: React.FC = () => {
             win_rate: gamesPlayed > 0 ? wins / gamesPlayed : 0,
             last_active: new Date(),
             updated_at: new Date(),
-            provisionalRating: gamesPlayed >= 5 ? false : userData.provisionalRating,
-            rating: ratings[userId]
-          };
-          await updateDoc(userRef, updateObj);
+            provisionalRating: gamesPlayed >= 5 ? false : userData.provisionalRating
+          });
         }
       }
     } catch (error) {
@@ -585,14 +620,14 @@ export const UsersDebateRoom: React.FC = () => {
     }
   };
 
-  // Auto end debate after MAX_ROUNDS
+  // Auto end debate after maxRounds
   useEffect(() => {
     if (!debate) return;
-    if (debate.currentRound > MAX_ROUNDS && debate.status === 'active') {
+    if (debate.currentRound > maxRounds && debate.status === 'active') {
       console.log('[DEBUG] UsersDebateRoom: Max rounds exceeded, ending debate');
       handleEndDebate();
     }
-  }, [debate]);
+  }, [debate, maxRounds]);
 
   // Determine if current user is a debater
   const isDebater = debate?.participants.some(p => p.userId === currentUser?.uid);
@@ -637,7 +672,7 @@ export const UsersDebateRoom: React.FC = () => {
           <div className="text-2xl font-bold mb-4">Loading Debate...</div>
           <LoadingSpinner size="lg" />
           <div className="mt-4 text-gray-400">
-            {roomId ? `Debate ID: ${roomId}` : 'No debate ID provided'}
+            {id ? `Debate ID: ${id}` : 'No debate ID provided'}
           </div>
         </div>
       </div>
@@ -662,7 +697,7 @@ export const UsersDebateRoom: React.FC = () => {
 
   const myParticipant = debate.participants.find(p => p.userId === currentUser?.uid);
   const otherParticipant = debate.participants.find(p => p.userId !== currentUser?.uid);
-  const canSubmit = isMyTurn && !isSubmitting && debate.status === 'active' && debate.currentRound <= MAX_ROUNDS;
+  const canSubmit = isMyTurn && !isSubmitting && debate.status === 'active' && debate.currentRound <= maxRounds;
   const isDebateCompleted = debate.status === 'completed';
   
   // Debug logging
@@ -710,7 +745,7 @@ export const UsersDebateRoom: React.FC = () => {
           {debate && (
             <div className="flex items-center gap-2 text-sm text-gray-400">
               <RotateCcw className="w-4 h-4" />
-              <span>Round {debate.currentRound}/{MAX_ROUNDS}</span>
+              <span>Round {debate.currentRound}/{maxRounds}</span>
             </div>
           )}
           {/* Timer */}
@@ -893,9 +928,9 @@ export const UsersDebateRoom: React.FC = () => {
           {/* End Debate button on the left */}
           <Button
             onClick={handleEndDebate}
-            disabled={!debate || isSubmitting || isDebateCompleted || (debate && debate.currentRound <= MAX_ROUNDS)}
-            className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl mr-2 ${isDebateCompleted || (debate && debate.currentRound <= MAX_ROUNDS) ? 'opacity-60 cursor-not-allowed' : ''}`}
-            title={debate && debate.currentRound <= MAX_ROUNDS ? 'The debate can only be ended after completion of all rounds' : 'End Debate'}
+            disabled={!debate || isSubmitting || isDebateCompleted || (debate && debate.currentRound <= maxRounds)}
+            className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl mr-2 ${isDebateCompleted || (debate && debate.currentRound <= maxRounds) ? 'opacity-60 cursor-not-allowed' : ''}`}
+            title={debate && debate.currentRound <= maxRounds ? 'The debate can only be ended after completion of all rounds' : 'End Debate'}
           >
             <Flag className="w-5 h-5" />
           </Button>

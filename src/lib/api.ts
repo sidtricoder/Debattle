@@ -286,8 +286,6 @@ export const api = {
         draws,
         winRate,
         averageRating: userData.rating || 1000,
-        currentStreak: userData.winStreak || 0,
-        bestStreak: userData.bestStreak || 0,
         totalArguments: userData.totalArguments || 0,
         averageArgumentScore: userData.averageArgumentScore || 0
       };

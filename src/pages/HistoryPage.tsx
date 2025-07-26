@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, Trophy, TrendingUp, TrendingDown, Minus, Search, Filter, ArrowDownAZ, ArrowDownZA, ArrowDownWideNarrow } from 'lucide-react';
+import { ChatLoadingAnimation } from '../components/animations/ChatLoadingAnimation';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useDebateStore } from '../stores/debateStore';
 import { useEffect } from 'react';
@@ -305,7 +306,14 @@ const HistoryPage: React.FC = () => {
   // Replace all mockHistory references with debates
   // Show loading state
   if (isLoading) {
-    return <div className="p-8 text-center">Loading debate history...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-900 flex items-center justify-center p-4">
+        <ChatLoadingAnimation 
+          message="Loading your debate history..." 
+          className="py-20"
+        />
+      </div>
+    );
   }
 
   // Show empty state
