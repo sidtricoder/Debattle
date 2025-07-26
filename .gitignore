@@ -27,5 +27,5 @@ firebase-config.js
 .env
 sid-debattle-firebase-adminsdk-fbsvc-b12bed7830.json
 repomix-output-NeoMentor.txt
-public_backup/
+public_backup
 
