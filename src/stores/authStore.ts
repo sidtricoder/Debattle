@@ -30,8 +30,6 @@ const toUser = (data: any): User => ({
   wins: data.wins || 0,
   losses: data.losses || 0,
   draws: data.draws || 0,
-  winStreak: data.winStreak || 0,
-  bestWinStreak: data.bestWinStreak || 0,
   win_rate: data.win_rate || 0,
   achievements: Array.isArray(data.achievements) ? data.achievements : [],
   xp: data.xp || 0,
@@ -61,7 +59,11 @@ const toUser = (data: any): User => ({
     averageResponseTime: data.stats?.averageResponseTime || 0,
     favoriteTopics: Array.isArray(data.stats?.favoriteTopics) ? data.stats.favoriteTopics : [],
     strongestCategories: Array.isArray(data.stats?.strongestCategories) ? data.stats.strongestCategories : []
-  }
+  },
+  practiceSessions: data.practiceSessions || 0,
+  practiceTime: data.practiceTime || 0,
+  practiceAvgScore: data.practiceAvgScore || 0,
+  practiceRatingGain: data.practiceRatingGain || 0,
 });
 
 // Fetch the latest user data from Firestore and update the store
@@ -108,7 +110,11 @@ export const useAuthStore = create<AuthStore>()(
               email: user.email,
               displayName: user.displayName,
               username: user.displayName?.toLowerCase().replace(/\s+/g, '_') || 'anonymous',
-              photoURL: user.photoURL
+              photoURL: user.photoURL,
+              practiceSessions: 0,
+              practiceTime: 0,
+              practiceAvgScore: 0,
+              practiceRatingGain: 0
             });
 
             // Convert Date objects to Firestore Timestamp for storage

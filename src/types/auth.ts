@@ -10,8 +10,6 @@ export interface User {
   wins: number;
   losses: number;
   draws: number;
-  winStreak: number;
-  bestWinStreak: number;
   win_rate: number;
   achievements: string[];
   xp: number;
@@ -24,6 +22,10 @@ export interface User {
   bio: string;
   preferences: UserPreferences;
   stats: UserStats;
+  practiceSessions?: number;
+  practiceTime?: number; // in minutes
+  practiceAvgScore?: number;
+  practiceRatingGain?: number;
 }
 
 export interface UserPreferences {
@@ -46,6 +48,10 @@ export interface UserStats {
   averageResponseTime: number;
   favoriteTopics: string[];
   strongestCategories: string[];
+  practiceSessions?: number;
+  practiceTime?: number;
+  practiceAvgScore?: number;
+  practiceRatingGain?: number;
 }
 
 export interface AuthState {

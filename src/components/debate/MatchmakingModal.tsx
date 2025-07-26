@@ -7,7 +7,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { firestore } from '../../lib/firebase';
 
 // Constants
-const MAX_ROUNDS = 5;
+const MAX_ROUNDS = 2;
 const TURN_TIME_SECONDS = 60;
 const JUDGE_MODEL = 'llama-70b';
 
@@ -124,6 +124,7 @@ export const MatchmakingModal: React.FC<MatchmakingModalProps> = ({ open, onClos
             console.log('[DEBUG] Creating debate room as user with lower ID');
             roomId = await createDebateRoom(
               topicTitle,
+              topicId,
               userId,
               match.userId,
               userRating,

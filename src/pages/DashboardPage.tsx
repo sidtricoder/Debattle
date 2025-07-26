@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ChatLoadingAnimation } from '../components/animations/ChatLoadingAnimation';
 import { Link } from 'react-router-dom';
 import { 
   TrendingUp, 
@@ -44,8 +45,9 @@ const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState({
     totalDebates: 0,
     winRate: 0,
-    currentStreak: 0,
-    totalWins: 0
+    totalWins: 0,
+    totalDraws: 0,
+    totalLosses: 0
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [ratingHistory, setRatingHistory] = useState<any[]>([]);
@@ -72,8 +74,9 @@ const DashboardPage: React.FC = () => {
         setStats({
           totalDebates,
           winRate,
-          currentStreak: 0, // You can implement streak logic if needed
-          totalWins: wins
+          totalWins: wins,
+          totalDraws: draws,
+          totalLosses: losses
         });
 
         // Fetch all recent debates and filter in JS for user participation
@@ -96,17 +99,24 @@ const DashboardPage: React.FC = () => {
             let date = d.endedAt || d.createdAt;
             if (date?.toDate) date = date.toDate();
             else if (typeof date === 'string') date = new Date(date);
-            else if (typeof date === 'number') date = new Date(date); // handle numeric timestamps
+            else if (typeof date === 'number') date = new Date(date);
             // Get rating after debate for user
             const rating = d.ratings && d.ratings[user.uid] !== undefined ? d.ratings[user.uid] : null;
             return {
-              date: date ? date.toLocaleDateString() : '',
+              date,  // Keep as Date object for sorting
+              displayDate: date ? date.toLocaleDateString() : '',
               rating
             };
           })
           .filter(d => d.rating !== null)
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // oldest to newest
-        setRatingHistory(history.slice(-20)); // last 20 points
+          .sort((a, b) => a.date.getTime() - b.date.getTime()) // Sort by Date objects
+          .slice(-20) // last 20 points
+          .map(item => ({
+            date: item.displayDate, // Convert to display format after sorting
+            rating: item.rating
+          }));
+        
+        setRatingHistory(history);
 
         // Fetch recent activity (optional, can keep as is)
         const activityQuery = query(
@@ -146,11 +156,10 @@ const DashboardPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-900 flex items-center justify-center p-4">
+        <ChatLoadingAnimation 
+          message="Loading your dashboard..." 
+          className="py-20"
         />
       </div>
     );
@@ -224,28 +233,28 @@ const DashboardPage: React.FC = () => {
                 borderColor: 'border-blue-200'
               },
               {
-                title: 'Win Rate',
-                value: `${stats.winRate}%`,
-                icon: Trophy,
-                color: 'from-yellow-500 to-orange-600',
-                bgColor: 'from-yellow-50 to-orange-50',
-                borderColor: 'border-yellow-200'
-              },
-              {
-                title: 'Current Streak',
-                value: stats.currentStreak,
-                icon: Flame,
-                color: 'from-red-500 to-pink-600',
-                bgColor: 'from-red-50 to-pink-50',
-                borderColor: 'border-red-200'
-              },
-              {
                 title: 'Total Wins',
                 value: stats.totalWins,
                 icon: Crown,
                 color: 'from-purple-500 to-indigo-600',
                 bgColor: 'from-purple-50 to-indigo-50',
                 borderColor: 'border-purple-200'
+              },
+              {
+                title: 'Total Draws',
+                value: stats.totalDraws,
+                icon: Award,
+                color: 'from-gray-400 to-gray-600',
+                bgColor: 'from-gray-50 to-gray-200',
+                borderColor: 'border-gray-200'
+              },
+              {
+                title: 'Total Losses',
+                value: stats.totalLosses,
+                icon: Flame,
+                color: 'from-red-500 to-pink-600',
+                bgColor: 'from-red-50 to-pink-50',
+                borderColor: 'border-red-200'
               }
             ].map((stat, index) => {
               const Icon = stat.icon;
@@ -392,16 +401,15 @@ const DashboardPage: React.FC = () => {
               transition={{ duration: 0.8, delay: 0.6 }}
               className="space-y-8"
             >
-              {/* Recent Activity */}
+              {/* Recent Activity - hidden as per request */}
+              {/*
               <div className="rounded-2xl p-6 dark:bg-transparent">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 tracking-tight dark:text-gray-100">
                     <Clock className="w-5 h-5 text-blue-500" />
                     Recent Activity
                   </h2>
-                  {/* Rotating icon removed */}
                 </div>
-
                 <div className="space-y-4">
                   {recentActivity.length > 0 ? (
                     recentActivity.map((activity, index) => (
@@ -441,6 +449,7 @@ const DashboardPage: React.FC = () => {
                   )}
                 </div>
               </div>
+              */}
 
               {/* Profile Stats */}
               <div className="rounded-2xl p-6 dark:bg-transparent">
@@ -458,12 +467,16 @@ const DashboardPage: React.FC = () => {
                     <span className="font-bold text-gray-800 dark:text-white">{stats.totalWins}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 text-sm dark:text-gray-300">Win Rate</span>
-                    <span className="font-bold text-gray-800 dark:text-white">{stats.winRate}%</span>
+                    <span className="text-gray-600 text-sm dark:text-gray-300">Debates Drawn</span>
+                    <span className="font-bold text-gray-800 dark:text-white">{stats.totalDraws}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 text-sm dark:text-gray-300">Current Streak</span>
-                    <span className="font-bold text-gray-800 dark:text-white">{stats.currentStreak}</span>
+                    <span className="text-gray-600 text-sm dark:text-gray-300">Debates Lost</span>
+                    <span className="font-bold text-gray-800 dark:text-white">{stats.totalLosses}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600 text-sm dark:text-gray-300">Win Rate</span>
+                    <span className="font-bold text-gray-800 dark:text-white">{stats.winRate}%</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600 text-sm dark:text-gray-300">ELO Rating</span>

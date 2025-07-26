@@ -8,8 +8,11 @@ import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
 import { PracticeSettingsModal } from '../components/practice/PracticeSettingsModal';
 import Footer from '../components/layout/Footer';
+import practiceTopicsData from '../data/practiceTopics.json';
 
-interface PracticeTopic {
+const practiceTopics = practiceTopicsData as PracticeTopic[];
+
+export interface PracticeTopic {
   id: string;
   title: string;
   category: string;
@@ -20,93 +23,61 @@ interface PracticeTopic {
   tips: string[];
 }
 
-const practiceTopics: PracticeTopic[] = [
-  {
-    id: '1',
-    title: 'Should social media platforms be regulated?',
-    category: 'Technology',
-    difficulty: 'intermediate',
-    description: 'Practice arguing both sides of social media regulation with our AI opponent.',
-    estimatedTime: 15,
-    aiPersonality: 'Analytical and data-driven',
-    tips: [
-      'Focus on concrete examples of regulation impact',
-      'Consider both user privacy and platform responsibility',
-      'Address potential unintended consequences'
-    ]
-  },
-  {
-    id: '2',
-    title: 'Is remote work better than office work?',
-    category: 'Business',
-    difficulty: 'beginner',
-    description: 'A great starting topic to practice your debating skills.',
-    estimatedTime: 10,
-    aiPersonality: 'Balanced and fair',
-    tips: [
-      'Consider productivity metrics',
-      'Think about work-life balance',
-      'Address team collaboration challenges'
-    ]
-  },
-  {
-    id: '3',
-    title: 'Should college education be free?',
-    category: 'Education',
-    difficulty: 'advanced',
-    description: 'Challenge yourself with this complex economic and social issue.',
-    estimatedTime: 20,
-    aiPersonality: 'Critical and thorough',
-    tips: [
-      'Research funding mechanisms',
-      'Consider accessibility vs. quality',
-      'Address long-term economic impacts'
-    ]
-  },
-  {
-    id: '4',
-    title: 'Are electric vehicles truly environmentally friendly?',
-    category: 'Environment',
-    difficulty: 'intermediate',
-    description: 'Debate the full environmental impact of electric vehicles.',
-    estimatedTime: 12,
-    aiPersonality: 'Evidence-based and thorough',
-    tips: [
-      'Consider the full lifecycle impact',
-      'Address battery production and disposal',
-      'Compare with traditional vehicles'
-    ]
-  },
-  {
-    id: '5',
-    title: 'Should AI development be paused?',
-    category: 'Technology',
-    difficulty: 'advanced',
-    description: 'Practice with this cutting-edge technology debate.',
-    estimatedTime: 18,
-    aiPersonality: 'Forward-thinking and cautious',
-    tips: [
-      'Consider both safety and progress',
-      'Address economic implications',
-      'Think about international competition'
-    ]
-  }
-];
-
 const PracticePage: React.FC = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [selectedTopic, setSelectedTopic] = useState<PracticeTopic | null>(null);
-  const [isPracticing, setIsPracticing] = useState(false);
+  const [isCreatingPractice, setIsCreatingPractice] = useState(false);
+  const [showTips, setShowTips] = useState(false);
+  const [practiceStats, setPracticeStats] = useState({
+    practiceSessions: 0,
+    practiceTime: 0,
+    practiceAvgScore: 0,
+    practiceRatingGain: 0
+  });
   const [practiceTime, setPracticeTime] = useState(0);
   const [selectedDifficulty, setSelectedDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate');
-  const [showTips, setShowTips] = useState(false);
-  const [isCreatingPractice, setIsCreatingPractice] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [pendingTopic, setPendingTopic] = useState<PracticeTopic | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // User data is managed by the auth store
-  const filteredTopics = practiceTopics.filter(topic => topic.difficulty === selectedDifficulty);
+  // Filter topics by difficulty and search query
+  const filteredTopics = practiceTopics.filter(topic => {
+    const matchesDifficulty = topic.difficulty === selectedDifficulty;
+    const matchesSearch = topic.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         topic.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         topic.category.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesDifficulty && (searchQuery === '' || matchesSearch);
+  });
+
+  useEffect(() => {
+    const fetchPracticeStats = async () => {
+      if (!user) return;
+      try {
+        console.log('USER UID:', user?.uid);
+        const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          console.log('Fetched Firestore user data:', data);
+          setPracticeStats({
+            practiceSessions: data.practiceSessions || 0,
+            practiceTime: data.practiceTime || 0,
+            practiceAvgScore: data.practiceAvgScore || 0,
+            practiceRatingGain: (data.rating || 1200) - 1200
+          });
+        }
+      } catch (e) {
+        console.log('Fallback user object:', user);
+        setPracticeStats({
+          practiceSessions: user.practiceSessions || 0,
+          practiceTime: user.practiceTime || 0,
+          practiceAvgScore: user.practiceAvgScore || 0,
+          practiceRatingGain: (user.rating || 1200) - 1200
+        });
+      }
+    };
+    fetchPracticeStats();
+  }, [user]);
 
   const startPractice = async (topic: PracticeTopic) => {
     if (!user) {
@@ -181,7 +152,7 @@ const PracticePage: React.FC = () => {
         const userParticipant = {
           userId: user.uid,
           displayName: user.displayName || `User ${user.uid.slice(-4)}`,
-          rating: 1200,
+          rating: user.rating,
           stance: settings.userStance,
           isOnline: true,
           isTyping: false,
@@ -393,7 +364,7 @@ const PracticePage: React.FC = () => {
             <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <Brain className="w-7 h-7 text-white" />
             </div>
-            <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">24</div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">{practiceStats.practiceSessions}</div>
             <div className="text-gray-600 dark:text-gray-300 font-medium">Practice Sessions</div>
           </div>
           <div className="hidden md:flex w-px mx-0 my-6 bg-gradient-to-b from-purple-200 via-pink-200 to-yellow-100 opacity-60" />
@@ -401,7 +372,7 @@ const PracticePage: React.FC = () => {
             <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <Clock className="w-7 h-7 text-white" />
             </div>
-            <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">6.5h</div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">{practiceStats.practiceTime}m</div>
             <div className="text-gray-600 dark:text-gray-300 font-medium">Total Practice Time</div>
           </div>
           <div className="hidden md:flex w-px mx-0 my-6 bg-gradient-to-b from-blue-200 via-purple-200 to-pink-100 opacity-50" />
@@ -409,7 +380,7 @@ const PracticePage: React.FC = () => {
             <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <Star className="w-7 h-7 text-white" />
             </div>
-            <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">8.2</div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">{practiceStats.practiceAvgScore}</div>
             <div className="text-gray-600 dark:text-gray-300 font-medium">Avg. Score</div>
           </div>
           <div className="hidden md:flex w-px mx-0 my-6 bg-gradient-to-b from-orange-200 via-red-200 to-pink-100 opacity-40" />
@@ -417,7 +388,7 @@ const PracticePage: React.FC = () => {
             <div className="w-14 h-14 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <TrendingUp className="w-7 h-7 text-white" />
             </div>
-            <div className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">+45</div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">{practiceStats.practiceRatingGain > 0 ? `+${practiceStats.practiceRatingGain}` : practiceStats.practiceRatingGain}</div>
             <div className="text-gray-600 dark:text-gray-300 font-medium">Rating Gain</div>
           </div>
         </motion.div>
@@ -427,9 +398,42 @@ const PracticePage: React.FC = () => {
           <hr className="w-1/2 h-0.5 rounded-full border-0 bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 opacity-50" />
         </div>
 
+        {/* Search Bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="px-8 mb-8 max-w-3xl mx-auto"
+        >
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search topics..."
+              className="w-full px-6 py-4 pl-14 pr-12 rounded-2xl border-2 border-gray-200 dark:border-gray-600 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-transparent transition-all duration-300 text-lg shadow-sm backdrop-blur-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <div className="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </motion.div>
+
         {/* Difficulty Filter */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="p-8 mb-12"
@@ -468,94 +472,121 @@ const PracticePage: React.FC = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="flex flex-col lg:flex-row items-stretch justify-center mb-12 gap-0"
+          className="w-full"
         >
-          {filteredTopics.map((topic, index) => (
-            <React.Fragment key={topic.id}>
-              <div className="p-8 transition-all duration-300 flex-1 flex flex-col justify-center">
-                <div className="flex items-start justify-between mb-6">
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold shadow-none ${getDifficultyColor(topic.difficulty)}`}> 
-                    {topic.difficulty === 'beginner' && '🌱'}
-                    {topic.difficulty === 'intermediate' && '⚡'}
-                    {topic.difficulty === 'advanced' && '🔥'}
-                    {' '}
-                    {topic.difficulty}
-                  </span>
-                  <div className="flex items-center gap-2 text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-                    <Clock className="w-4 h-4" />
-                    <span className="text-sm font-medium">{topic.estimatedTime}m</span>
-                  </div>
-                </div>
-
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
-                  {topic.title}
-                </h3>
-                
-                <p className="text-gray-600 dark:text-gray-300 text-sm mb-6 leading-relaxed">
-                  {topic.description}
-                </p>
-
-                <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl">
-                  <div className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    AI Personality:
-                  </div>
-                  <div className="text-sm text-blue-800 dark:text-blue-200">
-                    {topic.aiPersonality}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <button
-                    onClick={() => startPractice(topic)}
-                    disabled={isCreatingPractice}
-                    className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 shadow-none disabled:opacity-50"
-                  >
-                    {isCreatingPractice && selectedTopic?.id === topic.id ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Creating Practice...
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-5 h-5" />
-                        Start Practice
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setShowTips(!showTips)}
-                    className="w-full border-2 border-purple-100 dark:border-purple-700 text-purple-700 dark:text-purple-300 px-6 py-3 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-300 text-sm font-medium shadow-none"
-                  >
-                    {showTips ? '🙈 Hide' : '💡 Show'} Tips
-                  </button>
-                </div>
-
-                {showTips && (
-                  <div
-                    className="mt-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl border border-yellow-100 dark:border-yellow-700"
-                  >
-                    <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-3 flex items-center gap-2">
-                      <Award className="w-4 h-4" />
-                      Practice Tips:
-                    </h4>
-                    <ul className="space-y-2">
-                      {topic.tips.map((tip, tipIndex) => (
-                        <li key={tipIndex} className="text-sm text-yellow-800 dark:text-yellow-200 flex items-start gap-2">
-                          <span className="text-yellow-600 dark:text-yellow-400 mt-1">•</span>
-                          {tip}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+          {filteredTopics.length === 0 ? (
+            <div className="text-center py-16 px-6 bg-white/50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full flex items-center justify-center mb-4">
+                <MessageSquare className="w-8 h-8 text-purple-500 dark:text-purple-400" />
               </div>
-              {/* Only show separator between cards, not after the last */}
-              {(index !== filteredTopics.length - 1) && (
-                <div className="hidden lg:flex w-px mx-0 my-8 bg-gradient-to-b from-purple-200 via-pink-200 to-yellow-100 opacity-40" />
+              <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">No topics found</h3>
+              <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+                {searchQuery 
+                  ? `No topics match "${searchQuery}" with the current filters.`
+                  : 'No topics match the current difficulty filter.'
+                }
+              </p>
+              {(searchQuery || selectedDifficulty !== 'intermediate') && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedDifficulty('intermediate');
+                  }}
+                  className="mt-4 px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
+                >
+                  Clear filters
+                </button>
               )}
-            </React.Fragment>
-          ))}
+            </div>
+          ) : (
+            <div className="w-full">
+              {/* Responsive grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6">
+                {filteredTopics.map((topic) => (
+                  <div 
+                    key={topic.id} 
+                    className="bg-white dark:bg-gray-800/50 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 flex flex-col h-full"
+                  >
+                    <div className="p-4 md:p-5 lg:p-6 flex flex-col h-full">
+                      <div className="flex items-start justify-between mb-3">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getDifficultyColor(topic.difficulty)}`}>
+                          {topic.difficulty === 'beginner' && '🌱'}
+                          {topic.difficulty === 'intermediate' && '⚡'}
+                          {topic.difficulty === 'advanced' && '🔥'} {topic.difficulty}
+                        </span>
+                        <div className="flex items-center gap-1.5 text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs">
+                          <Clock className="w-3 h-3" />
+                          <span>{topic.estimatedTime}m</span>
+                        </div>
+                      </div>
+
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 leading-tight line-clamp-2">
+                        {topic.title}
+                      </h3>
+                      
+                      <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 leading-relaxed flex-grow line-clamp-3">
+                        {topic.description}
+                      </p>
+
+                      <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
+                        <div className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-1 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          AI Personality:
+                        </div>
+                        <div className="text-xs text-blue-800 dark:text-blue-200 line-clamp-2">
+                          {topic.aiPersonality}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 mt-auto">
+                        <button
+                          onClick={() => startPractice(topic)}
+                          disabled={isCreatingPractice}
+                          className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 text-sm shadow-none disabled:opacity-50"
+                        >
+                          {isCreatingPractice && selectedTopic?.id === topic.id ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Creating...
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4" />
+                              Start Practice
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setShowTips(!showTips)}
+                          className="w-full border border-purple-100 dark:border-purple-700 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-300 text-xs font-medium shadow-none"
+                        >
+                          {showTips ? '🙈 Hide' : '💡 Show'} Tips
+                        </button>
+                      </div>
+
+                      {showTips && (
+                        <div className="mt-4 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg border border-yellow-100 dark:border-yellow-700">
+                          <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2 flex items-center gap-1.5 text-xs">
+                            <Award className="w-3.5 h-3.5" />
+                            Practice Tips:
+                          </h4>
+                          <ul className="space-y-1">
+                            {topic.tips.map((tip, index) => (
+                              <li key={index} className="text-xs text-yellow-800 dark:text-yellow-200 flex items-start gap-1.5">
+                                <span className="text-yellow-600 dark:text-yellow-400 mt-0.5">•</span>
+                                <span className="flex-1">{tip}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+            </div>
+          )}
         </motion.div>
 
         {/* Fancy separator */}

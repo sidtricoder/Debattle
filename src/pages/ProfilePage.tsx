@@ -387,14 +387,6 @@ const ProfilePage: React.FC = () => {
                       <span className="text-gray-600 dark:text-gray-300">Draws</span>
                       <span className="font-semibold text-yellow-600 dark:text-yellow-400">{user?.draws || 0}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600 dark:text-gray-300">Current Streak</span>
-                      <span className="font-semibold text-blue-600 dark:text-blue-400">{user?.winStreak || 0}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600 dark:text-gray-300">Best Streak</span>
-                      <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.bestWinStreak || 0}</span>
-                    </div>
                   </div>
                 </div>
                 {/* Recent Activity */}

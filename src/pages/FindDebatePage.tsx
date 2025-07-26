@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, 
   Filter, 
@@ -20,14 +20,17 @@ import {
   ArrowRight,
   Play
 } from 'lucide-react';
+import { ChatLoadingAnimation } from '../components/animations/ChatLoadingAnimation';
 import { useAuth } from '../components/auth/AuthProvider';
 import { firestore } from '../lib/firebase';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import Footer from '../components/layout/Footer';
 import MatchmakingModal from '../components/debate/MatchmakingModal';
+import CustomDebateRoom from './customDebateRoom';
 
 const FindDebatePage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
@@ -35,6 +38,7 @@ const FindDebatePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showMatchmaking, setShowMatchmaking] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<any | null>(null);
+  const [showCustomDebateModal, setShowCustomDebateModal] = useState(false);
 
   useEffect(() => {
     const fetchTopics = async () => {
@@ -42,7 +46,7 @@ const FindDebatePage: React.FC = () => {
         const topicsQuery = query(
           collection(firestore, 'topics'),
           orderBy('usageCount', 'desc'),
-          limit(20)
+          limit(100)
         );
         const topicsSnapshot = await getDocs(topicsQuery);
         const topicsData = topicsSnapshot.docs.map(doc => ({
@@ -102,7 +106,7 @@ const FindDebatePage: React.FC = () => {
   const categories = [
     { name: 'all', label: 'All Topics', icon: Target, emoji: '🎯' },
     { name: 'technology', label: 'Technology', icon: Zap, emoji: '⚡' },
-    { name: 'politics', label: 'Politics', icon: Crown, emoji: '👑' },
+    { name: 'science', label: 'Science', icon: Brain, emoji: '🔬' },
     { name: 'business', label: 'Business', icon: TrendingUp, emoji: '📈' },
     { name: 'education', label: 'Education', icon: Brain, emoji: '🧠' },
     { name: 'society', label: 'Society', icon: Users, emoji: '👥' }
@@ -145,11 +149,10 @@ const FindDebatePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 via-indigo-50 to-purple-100 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"
+      <div className="min-h-screen bg-gradient-to-b from-blue-600 via-purple-600 to-indigo-600 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 flex items-center justify-center">
+        <ChatLoadingAnimation 
+          message="Finding debates for you..." 
+          className="py-20 text-white"
         />
       </div>
     );
@@ -280,10 +283,7 @@ const FindDebatePage: React.FC = () => {
                       <div className={`px-3 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-b ${getDifficultyColor(topic.difficulty)}`}> 
                         {getDifficultyEmoji(topic.difficulty)} {topic.difficulty}/10
                       </div>
-                      <div className="flex items-center gap-1 text-yellow-500">
-                        <Star className="w-4 h-4 fill-current" />
-                        <span className="text-sm font-medium">{topic.usageCount || 0}</span>
-                      </div>
+                      {/* Removed star and usage count */}
                     </div>
                     {/* Title */}
                     <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3 leading-tight">
@@ -311,6 +311,10 @@ const FindDebatePage: React.FC = () => {
                         Quick Match
                       </button>
                       <button
+                        onClick={() => {
+                          setSelectedTopic(topic);
+                          setShowCustomDebateModal(true);
+                        }}
                         className="px-4 py-3 text-gray-600 dark:text-gray-300 rounded-xl flex items-center justify-center"
                       >
                         <Play className="w-4 h-4" />
@@ -359,6 +363,13 @@ const FindDebatePage: React.FC = () => {
         userId={user?.uid || ''}
         userRating={user?.rating || 1000}
       />
+      {showCustomDebateModal && (
+        <CustomDebateRoom
+          open={showCustomDebateModal}
+          onClose={() => setShowCustomDebateModal(false)}
+          topic={selectedTopic?.title || ''}
+        />
+      )}
       <Footer />
     </div>
   );

@@ -1,0 +1,1402 @@
+[
+  {
+    "id": "1",
+    "title": "Is remote work the future of employment?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Debate the long-term viability and impact of remote work on businesses and employees.",
+    "estimatedTime": 15,
+    "aiPersonality": "Analytical and balanced",
+    "tips": [
+      "Examine productivity research from different industries",
+      "Consider impact on company culture and collaboration",
+      "Address work-life balance and mental health aspects"
+    ]
+  },
+  {
+    "id": "2",
+    "title": "Should social media platforms be held accountable for misinformation?",
+    "category": "Technology",
+    "difficulty": "intermediate",
+    "description": "Explore the role and responsibility of platforms in moderating content.",
+    "estimatedTime": 18,
+    "aiPersonality": "Technically informed and policy-aware",
+    "tips": [
+      "Examine content moderation challenges and solutions",
+      "Consider free speech implications",
+      "Analyze impact on public discourse"
+    ]
+  },
+  {
+    "id": "3",
+    "title": "Is standardized testing an effective measure of student learning?",
+    "category": "Education",
+    "difficulty": "intermediate",
+    "description": "Debate the effectiveness and fairness of standardized assessments in education.",
+    "estimatedTime": 16,
+    "aiPersonality": "Educational and analytical",
+    "tips": [
+      "Examine alternative assessment methods",
+      "Consider socioeconomic factors in testing outcomes",
+      "Address teaching to the test phenomenon"
+    ]
+  },
+  {
+    "id": "4",
+    "title": "Are electric vehicles the solution to urban pollution?",
+    "category": "Environment",
+    "difficulty": "intermediate",
+    "description": "Debate the environmental impact and feasibility of widespread EV adoption.",
+    "estimatedTime": 20,
+    "aiPersonality": "Environmentally conscious and practical",
+    "tips": [
+      "Examine lifecycle environmental impact",
+      "Consider infrastructure requirements",
+      "Compare with other green transportation solutions"
+    ]
+  },
+  {
+    "id": "5",
+    "title": "Should artificial intelligence be used in creative industries?",
+    "category": "Technology",
+    "difficulty": "advanced",
+    "description": "Explore the implications of AI in art, music, and other creative fields.",
+    "estimatedTime": 22,
+    "aiPersonality": "Creative and technically informed",
+    "tips": [
+      "Examine copyright and ownership issues",
+      "Consider impact on human creativity",
+      "Address potential job displacement"
+    ]
+  },
+  {
+    "id": "6",
+    "title": "Is a four-day workweek beneficial for modern economies?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Debate the economic and social impacts of reducing the standard workweek.",
+    "estimatedTime": 18,
+    "aiPersonality": "Economically astute and pragmatic",
+    "tips": [
+      "Examine productivity research from pilot programs",
+      "Consider industry-specific impacts",
+      "Address potential economic consequences"
+    ]
+  },
+  {
+    "id": "7",
+    "title": "Should genetic modification be used to combat climate change?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Debate the potential and risks of using biotechnology for environmental solutions.",
+    "estimatedTime": 25,
+    "aiPersonality": "Scientifically rigorous and forward-thinking",
+    "tips": [
+      "Examine case studies of genetic solutions",
+      "Consider ecological risks and benefits",
+      "Address ethical implications"
+    ]
+  },
+  {
+    "id": "8",
+    "title": "Should companies mandate 4-day work weeks?",
+    "category": "Business",
+    "difficulty": "beginner",
+    "description": "Debate the productivity and well-being impacts of shorter work weeks.",
+    "estimatedTime": 15,
+    "aiPersonality": "Pragmatic and business-focused",
+    "tips": [
+        "Present productivity studies and real-world examples",
+        "Consider industry-specific implementation challenges",
+        "Address potential impacts on customer service and operations"
+    ]
+    },
+    {
+    "id": "9",
+    "title": "Is genetic engineering of crops necessary for food security?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Discuss GMO crops versus organic farming for global food needs.",
+    "estimatedTime": 25,
+    "aiPersonality": "Research-oriented and cautious",
+    "tips": [
+        "Compare yield data and nutritional benefits",
+        "Address environmental impact and biodiversity concerns",
+        "Discuss regulatory frameworks and consumer acceptance"
+    ]
+    },
+    {
+    "id": "10",
+    "title": "Should online learning replace traditional universities?",
+    "category": "Education",
+    "difficulty": "intermediate",
+    "description": "Compare digital education effectiveness with campus-based learning.",
+    "estimatedTime": 20,
+    "aiPersonality": "Progressive yet balanced",
+    "tips": [
+        "Evaluate learning outcomes and skill acquisition",
+        "Consider social aspects and networking opportunities",
+        "Address accessibility and cost considerations"
+    ]
+    },
+    {
+    "id": "11",
+    "title": "Is cryptocurrency viable as mainstream currency?",
+    "category": "Technology",
+    "difficulty": "intermediate",
+    "description": "Debate digital currencies versus traditional banking systems.",
+    "estimatedTime": 18,
+    "aiPersonality": "Tech-savvy and forward-thinking",
+    "tips": [
+        "Discuss volatility and stability concerns",
+        "Compare transaction costs and processing times",
+        "Address regulatory challenges and adoption barriers"
+    ]
+    },
+    {
+    "id": "12",
+    "title": "Should genetic therapy enhance human capabilities?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Explore ethics of gene editing beyond medical treatment.",
+    "estimatedTime": 30,
+    "aiPersonality": "Ethical and philosophical",
+    "tips": [
+        "Distinguish between treatment and enhancement",
+        "Consider equality and access implications",
+        "Address long-term societal consequences"
+    ]
+    },
+    {
+    "id": "13",
+    "title": "Is remote work more productive than office work?",
+    "category": "Business",
+    "difficulty": "beginner",
+    "description": "Compare productivity and collaboration in different work environments.",
+    "estimatedTime": 15,
+    "aiPersonality": "Data-driven and practical",
+    "tips": [
+        "Use specific productivity metrics and studies",
+        "Consider different job types and industries",
+        "Address management and communication challenges"
+    ]
+    },
+    {
+    "id": "14",
+    "title": "Should standardized testing be eliminated?",
+    "category": "Education",
+    "difficulty": "intermediate",
+    "description": "Debate whether standardized tests help or hinder education.",
+    "estimatedTime": 20,
+    "aiPersonality": "Analytical and student-focused",
+    "tips": [
+        "Compare assessment alternatives and their effectiveness",
+        "Consider equity and college admission implications",
+        "Address teacher autonomy and curriculum flexibility"
+    ]
+    },
+    {
+    "id": "15",
+    "title": "Is space exploration worth the enormous costs?",
+    "category": "Science",
+    "difficulty": "intermediate",
+    "description": "Examine whether space programs justify their expense.",
+    "estimatedTime": 22,
+    "aiPersonality": "Visionary yet cost-conscious",
+    "tips": [
+        "Highlight technological spin-offs and innovations",
+        "Compare space budgets to other government spending",
+        "Address scientific discovery and human inspiration value"
+    ]
+    },
+    {
+    "id": "16",
+    "title": "Should social media usage be age-restricted?",
+    "category": "Society",
+    "difficulty": "beginner",
+    "description": "Debate age limits for social media platforms.",
+    "estimatedTime": 15,
+    "aiPersonality": "Protective and research-based",
+    "tips": [
+        "Present psychological development research",
+        "Consider enforcement challenges and parental rights",
+        "Address digital literacy and online safety education"
+    ]
+    },
+    {
+    "id": "17",
+    "title": "Is lab-grown meat the future of food?",
+    "category": "Science",
+    "difficulty": "intermediate",
+    "description": "Compare cultured meat with traditional livestock farming.",
+    "estimatedTime": 20,
+    "aiPersonality": "Innovation-focused and environmental",
+    "tips": [
+        "Compare environmental impact and resource usage",
+        "Address taste, texture, and consumer acceptance",
+        "Consider economic impact on farming communities"
+    ]
+    },
+    {
+    "id": "18",
+    "title": "Should coding be mandatory in all schools?",
+    "category": "Education",
+    "difficulty": "beginner",
+    "description": "Debate whether programming skills are essential for all students.",
+    "estimatedTime": 15,
+    "aiPersonality": "Tech-enthusiastic and practical",
+    "tips": [
+        "Distinguish between coding and computational thinking",
+        "Consider resource requirements and teacher training",
+        "Address different career paths and skill relevance"
+    ]
+    },
+    {
+    "id": "19",
+    "title": "Is the gig economy beneficial for workers?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Examine freelance work versus traditional employment benefits.",
+    "estimatedTime": 18,
+    "aiPersonality": "Worker-advocate and economically aware",
+    "tips": [
+        "Compare income stability and benefits packages",
+        "Consider flexibility and work-life balance factors",
+        "Address regulatory protection and worker classification"
+    ]
+    },
+    {
+    "id": "20",
+    "title": "Should virtual reality replace textbooks?",
+    "category": "Technology",
+    "difficulty": "intermediate",
+    "description": "Compare immersive VR learning with traditional educational materials.",
+    "estimatedTime": 20,
+    "aiPersonality": "Immersive and education-focused",
+    "tips": [
+        "Compare retention rates and engagement levels",
+        "Address cost and accessibility concerns",
+        "Consider age-appropriate implementation strategies"
+    ]
+    },
+    {
+    "id": "21",
+    "title": "Is climate engineering necessary for global warming?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Debate geoengineering versus emission reduction strategies.",
+    "estimatedTime": 25,
+    "aiPersonality": "Urgency-driven and scientifically rigorous",
+    "tips": [
+        "Compare intervention methods and their risks",
+        "Address timeline pressures and natural solution limits",
+        "Consider international cooperation and governance issues"
+    ]
+    },
+    {
+    "id": "22",
+    "title": "Should museums return cultural artifacts?",
+    "category": "Society",
+    "difficulty": "intermediate",
+    "description": "Examine repatriation versus global accessibility of artifacts.",
+    "estimatedTime": 20,
+    "aiPersonality": "Culturally sensitive and historically aware",
+    "tips": [
+        "Consider cultural significance and ownership rights",
+        "Address preservation and accessibility arguments",
+        "Discuss compromise solutions and sharing agreements"
+    ]
+    },
+    {
+    "id": "23",
+    "title": "Is artificial intelligence truly creative?",
+    "category": "Technology",
+    "difficulty": "advanced",
+    "description": "Debate whether AI can create original art and literature.",
+    "estimatedTime": 25,
+    "aiPersonality": "Philosophical and artistically inclined",
+    "tips": [
+        "Define creativity and originality clearly",
+        "Compare AI-generated content with human creativity",
+        "Address the role of training data and human input"
+    ]
+    },
+    {
+    "id": "24",
+    "title": "Should homework be banned in elementary schools?",
+    "category": "Education",
+    "difficulty": "beginner",
+    "description": "Examine homework's educational value versus childhood stress.",
+    "estimatedTime": 15,
+    "aiPersonality": "Child-development focused and empathetic",
+    "tips": [
+        "Present research on homework effectiveness by age",
+        "Consider family time and stress impact",
+        "Address alternative ways to reinforce learning"
+    ]
+    },
+    {
+    "id": "25",
+    "title": "Is sustainable fashion possible in fast fashion?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Debate environmental sustainability in the fashion industry.",
+    "estimatedTime": 18,
+    "aiPersonality": "Environmentally conscious and business-savvy",
+    "tips": [
+        "Compare production methods and material choices",
+        "Address consumer behavior and price sensitivity",
+        "Consider circular economy and recycling solutions"
+    ]
+    },
+    {
+    "id": "26",
+    "title": "Should human cloning be allowed for medical purposes?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Explore therapeutic cloning benefits versus ethical concerns.",
+    "estimatedTime": 30,
+    "aiPersonality": "Medically informed and ethically cautious",
+    "tips": [
+        "Distinguish between therapeutic and reproductive cloning",
+        "Address stem cell research and treatment potential",
+        "Consider religious and philosophical objections"
+    ]
+    },
+    {
+    "id": "27",
+    "title": "Is vertical farming the solution to food security?",
+    "category": "Technology",
+    "difficulty": "intermediate",
+    "description": "Compare vertical farming with traditional agriculture methods.",
+    "estimatedTime": 20,
+    "aiPersonality": "Innovation-driven and sustainability-focused",
+    "tips": [
+        "Compare energy usage and production efficiency",
+        "Address scalability and economic viability",
+        "Consider crop variety limitations and nutritional quality"
+    ]
+    },
+    {
+    "id": "28",
+    "title": "Should plastic packaging be completely eliminated?",
+    "category": "Society",
+    "difficulty": "beginner",
+    "description": "Debate plastic alternatives versus practical packaging needs.",
+    "estimatedTime": 15,
+    "aiPersonality": "Environmental advocate and pragmatic",
+    "tips": [
+        "Compare alternative materials and their limitations",
+        "Address food safety and preservation concerns",
+        "Consider transition costs and implementation challenges"
+    ]
+    },
+    {
+    "id": "29",
+    "title": "Is quantum computing a cybersecurity threat?",
+    "category": "Technology",
+    "difficulty": "advanced",
+    "description": "Examine quantum computing impact on digital security.",
+    "estimatedTime": 25,
+    "aiPersonality": "Security-focused and technically detailed",
+    "tips": [
+        "Explain current encryption vulnerabilities",
+        "Discuss quantum-resistant cryptography development",
+        "Address timeline and preparation strategies"
+    ]
+    },
+    {
+    "id": "30",
+    "title": "Should students use AI tools for academic work?",
+    "category": "Education",
+    "difficulty": "intermediate",
+    "description": "Debate AI assistance versus traditional learning methods.",
+    "estimatedTime": 18,
+    "aiPersonality": "Forward-thinking and academically rigorous",
+    "tips": [
+        "Distinguish between assistance and replacement",
+        "Address academic integrity and skill development",
+        "Consider preparation for AI-integrated workplaces"
+    ]
+    },
+    {
+    "id": "31",
+    "title": "Is biodegradable plastic the ultimate pollution solution?",
+    "category": "Science",
+    "difficulty": "intermediate",
+    "description": "Compare biodegradable plastics with other sustainable materials.",
+    "estimatedTime": 20,
+    "aiPersonality": "Scientifically precise and environmentally aware",
+    "tips": [
+        "Compare decomposition rates and conditions required",
+        "Address production costs and performance limitations",
+        "Consider composting infrastructure and consumer behavior"
+    ]
+    },
+    {
+    "id": "32",
+    "title": "Should companies prioritize profit or social responsibility?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Examine corporate responsibility versus shareholder interests.",
+    "estimatedTime": 20,
+    "aiPersonality": "Ethically minded and business-practical",
+    "tips": [
+        "Compare long-term vs short-term value creation",
+        "Address stakeholder capitalism and ESG investing",
+        "Consider competitive advantages of responsible practices"
+    ]
+    },
+    {
+    "id": "33",
+    "title": "Is fusion energy the holy grail of clean power?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Debate fusion energy potential versus current renewable investments.",
+    "estimatedTime": 25,
+    "aiPersonality": "Optimistic yet realistic about technical challenges",
+    "tips": [
+        "Compare fusion timeline with renewable energy scaling",
+        "Address technical challenges and breakthrough requirements",
+        "Consider investment allocation and energy transition needs"
+    ]
+    },
+    {
+    "id": "34",
+    "title": "Should social media ban anonymous accounts?",
+    "category": "Society",
+    "difficulty": "intermediate",
+    "description": "Debate online anonymity versus accountability.",
+    "estimatedTime": 18,
+    "aiPersonality": "Privacy-conscious and safety-focused",
+    "tips": [
+        "Consider whistleblowing and vulnerable population protection",
+        "Address harassment reduction versus free expression",
+        "Discuss verification methods and privacy implications"
+    ]
+    },
+    {
+    "id": "35",
+    "title": "Is brain-computer interface technology ready for adoption?",
+    "category": "Technology",
+    "difficulty": "advanced",
+    "description": "Examine benefits and risks of neural interface technology.",
+    "estimatedTime": 25,
+    "aiPersonality": "Cautiously optimistic and medically informed",
+    "tips": [
+        "Compare medical applications with enhancement uses",
+        "Address privacy and security of neural data",
+        "Consider long-term health effects and reversibility"
+    ]
+    },
+    {
+    "id": "36",
+    "title": "Should financial literacy be mandatory in high school?",
+    "category": "Education",
+    "difficulty": "beginner",
+    "description": "Debate teaching money management to teenagers.",
+    "estimatedTime": 15,
+    "aiPersonality": "Practical and student-empowerment focused",
+    "tips": [
+        "Compare financial literacy rates and economic outcomes",
+        "Address curriculum space and teacher preparation",
+        "Consider age-appropriate content and real-world application"
+    ]
+    },
+    {
+    "id": "37",
+    "title": "Is 3D printing revolutionizing manufacturing?",
+    "category": "Technology",
+    "difficulty": "intermediate",
+    "description": "Compare additive manufacturing with traditional production.",
+    "estimatedTime": 20,
+    "aiPersonality": "Manufacturing-focused and innovation-oriented",
+    "tips": [
+        "Compare production speed and cost efficiency",
+        "Address material limitations and quality control",
+        "Consider customization benefits and supply chain impact"
+    ]
+    },
+    {
+    "id": "38",
+    "title": "Should animal testing be banned for cosmetics?",
+    "category": "Science",
+    "difficulty": "intermediate",
+    "description": "Examine alternatives to animal testing versus safety requirements.",
+    "estimatedTime": 18,
+    "aiPersonality": "Ethically sensitive and scientifically informed",
+    "tips": [
+        "Compare alternative testing methods and their reliability",
+        "Address regulatory requirements and international standards",
+        "Consider consumer safety versus animal welfare priorities"
+    ]
+    },
+    {
+    "id": "39",
+    "title": "Is subscription software better than one-time purchases?",
+    "category": "Business",
+    "difficulty": "beginner",
+    "description": "Compare software service models with traditional ownership.",
+    "estimatedTime": 15,
+    "aiPersonality": "Consumer-focused and economically practical",
+    "tips": [
+        "Compare total cost of ownership over time",
+        "Address feature updates and support benefits",
+        "Consider user control and data ownership issues"
+    ]
+    },
+    {
+    "id": "40",
+    "title": "Should cities ban private cars for public transport?",
+    "category": "Society",
+    "difficulty": "intermediate",
+    "description": "Debate urban mobility solutions and environmental impact.",
+    "estimatedTime": 20,
+    "aiPersonality": "Urban planning focused and environmentally motivated",
+    "tips": [
+        "Compare air quality and congestion improvements",
+        "Address accessibility for disabled and elderly citizens",
+        "Consider economic impact on car-dependent industries"
+    ]
+    },
+    {
+    "id": "41",
+    "title": "Is artificial photosynthesis key to carbon capture?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Examine artificial photosynthesis for atmospheric CO2 reduction.",
+    "estimatedTime": 25,
+    "aiPersonality": "Climate-focused and technically detailed",
+    "tips": [
+        "Compare efficiency with natural photosynthesis and other methods",
+        "Address scalability and energy requirements",
+        "Consider integration with existing carbon capture strategies"
+    ]
+    },
+    {
+    "id": "42",
+    "title": "Should children learn second languages before age 5?",
+    "category": "Education",
+    "difficulty": "intermediate",
+    "description": "Debate early language acquisition versus other developmental priorities.",
+    "estimatedTime": 18,
+    "aiPersonality": "Child development expert and linguistically informed",
+    "tips": [
+        "Present critical period hypothesis and neuroplasticity research",
+        "Consider cognitive benefits and potential confusion",
+        "Address resource requirements and qualified teacher availability"
+    ]
+    },
+    {
+    "id": "43",
+    "title": "Is blockchain technology overhyped or underutilized?",
+    "category": "Technology",
+    "difficulty": "intermediate",
+    "description": "Examine practical blockchain applications beyond cryptocurrency.",
+    "estimatedTime": 20,
+    "aiPersonality": "Technologically balanced and application-focused",
+    "tips": [
+        "Compare blockchain benefits with traditional database solutions",
+        "Address energy consumption and scalability concerns",
+        "Highlight successful real-world implementations"
+    ]
+    },
+    {
+    "id": "44",
+    "title": "Should performance-enhancing drugs be allowed in sports?",
+    "category": "Society",
+    "difficulty": "intermediate",
+    "description": "Debate fairness and human enhancement in athletic competition.",
+    "estimatedTime": 20,
+    "aiPersonality": "Sports-knowledgeable and ethically nuanced",
+    "tips": [
+        "Consider athlete safety and long-term health effects",
+        "Address fairness and competitive integrity concerns",
+        "Compare with other performance advantages like technology"
+    ]
+    },
+    {
+    "id": "45",
+    "title": "Is telecommuting killing workplace innovation?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Examine remote work impact on creativity and collaboration.",
+    "estimatedTime": 18,
+    "aiPersonality": "Collaboration-focused and innovation-oriented",
+    "tips": [
+        "Compare innovation metrics before and after remote work adoption",
+        "Address digital collaboration tools and their limitations",
+        "Consider hybrid models and structured innovation processes"
+    ]
+    },
+    {
+    "id": "46",
+    "title": "Should we terraform Mars or fix Earth first?",
+    "category": "Science",
+    "difficulty": "intermediate",
+    "description": "Debate planetary colonization versus Earth's environmental challenges.",
+    "estimatedTime": 22,
+    "aiPersonality": "Visionary yet Earth-focused",
+    "tips": [
+        "Compare resource allocation and technological requirements",
+        "Address timeline urgency for climate action",
+        "Consider risk diversification and human survival strategies"
+    ]
+    },
+    {
+    "id": "47",
+    "title": "Is gamification effective in education and training?",
+    "category": "Education",
+    "difficulty": "beginner",
+    "description": "Examine game elements in learning and professional development.",
+    "estimatedTime": 15,
+    "aiPersonality": "Engaging and results-oriented",
+    "tips": [
+        "Compare engagement and retention rates with traditional methods",
+        "Address different learning styles and age groups",
+        "Consider potential drawbacks like addiction to rewards"
+    ]
+    },
+    {
+    "id": "48",
+    "title": "Should autonomous vehicles prioritize passenger safety?",
+    "category": "Technology",
+    "difficulty": "advanced",
+    "description": "Debate ethical programming in self-driving car safety systems.",
+    "estimatedTime": 25,
+    "aiPersonality": "Ethically rigorous and technically informed",
+    "tips": [
+        "Present various ethical frameworks and dilemma scenarios",
+        "Address legal liability and regulatory approaches",
+        "Consider public acceptance and trust factors"
+    ]
+    },
+    {
+    "id": "49",
+    "title": "Is mandatory mental health screening beneficial in schools?",
+    "category": "Society",
+    "difficulty": "intermediate",
+    "description": "Debate early intervention versus privacy concerns for students.",
+    "estimatedTime": 20,
+    "aiPersonality": "Mental health advocate and privacy-conscious",
+    "tips": [
+        "Compare early intervention benefits with potential stigmatization",
+        "Address parental rights and consent issues",
+        "Consider resource allocation and qualified professional availability"
+    ]
+    },
+    {
+    "id": "50",
+    "title": "Should companies adopt unlimited vacation policies?",
+    "category": "Business",
+    "difficulty": "beginner",
+    "description": "Examine unlimited PTO benefits versus productivity concerns.",
+    "estimatedTime": 15,
+    "aiPersonality": "HR-focused and employee-centric",
+    "tips": [
+        "Compare actual vacation usage under different policies",
+        "Address manager training and culture change requirements",
+        "Consider impact on different employee demographics"
+    ]
+    },
+    {
+    "id": "51",
+    "title": "Is gene drive technology safe for mosquito control?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Debate genetically modified mosquitoes versus ecological risks.",
+    "estimatedTime": 30,
+    "aiPersonality": "Cautiously scientific and public health oriented",
+    "tips": [
+        "Compare disease prevention benefits with ecosystem risks",
+        "Address reversibility and containment strategies",
+        "Consider international regulatory coordination needs"
+    ]
+    },
+    {
+    "id": "52",
+    "title": "Should schools use competency-based assessment?",
+    "category": "Education",
+    "difficulty": "intermediate",
+    "description": "Compare skill-based evaluation with traditional grading systems.",
+    "estimatedTime": 18,
+    "aiPersonality": "Assessment-focused and student-centered",
+    "tips": [
+        "Compare learning outcomes and college readiness",
+        "Address implementation challenges and teacher training",
+        "Consider employer understanding and acceptance"
+    ]
+    },
+    {
+    "id": "53",
+    "title": "Is augmented reality the future of retail?",
+    "category": "Technology",
+    "difficulty": "intermediate",
+    "description": "Examine AR technology impact on shopping experiences.",
+    "estimatedTime": 18,
+    "aiPersonality": "Retail-savvy and customer experience focused",
+    "tips": [
+        "Compare customer engagement and conversion rates",
+        "Address technology adoption barriers and costs",
+        "Consider privacy concerns with AR data collection"
+    ]
+    },
+    {
+    "id": "54",
+    "title": "Should plastic surgery be covered by healthcare?",
+    "category": "Society",
+    "difficulty": "intermediate",
+    "description": "Debate cosmetic procedures versus medical necessity coverage.",
+    "estimatedTime": 20,
+    "aiPersonality": "Healthcare policy focused and cost-conscious",
+    "tips": [
+        "Distinguish between reconstructive and cosmetic procedures",
+        "Address mental health benefits and quality of life",
+        "Consider healthcare resource allocation and priorities"
+    ]
+    },
+    {
+    "id": "55",
+    "title": "Is peer-to-peer lending safer than traditional banking?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Compare P2P lending platforms with bank loan systems.",
+    "estimatedTime": 18,
+    "aiPersonality": "Financial services expert and risk-aware",
+    "tips": [
+        "Compare default rates and investor protection mechanisms",
+        "Address regulatory oversight and consumer protections",
+        "Consider market accessibility and interest rate benefits"
+    ]
+    },
+    {
+    "id": "56",
+    "title": "Should lab-grown meat replace livestock farming?",
+    "category": "Science",
+    "difficulty": "intermediate",
+    "description": "Debate cultured meat versus traditional agriculture practices.",
+    "estimatedTime": 20,
+    "aiPersonality": "Sustainability-focused and agriculturally informed",
+    "tips": [
+        "Compare environmental footprint and resource efficiency",
+        "Address taste, nutrition, and consumer acceptance",
+        "Consider economic impact on farming communities"
+    ]
+    },
+    {
+    "id": "57",
+    "title": "Is microlearning more effective than traditional courses?",
+    "category": "Education",
+    "difficulty": "beginner",
+    "description": "Compare bite-sized learning with comprehensive programs.",
+    "estimatedTime": 15,
+    "aiPersonality": "Learning science focused and attention-aware",
+    "tips": [
+        "Compare retention rates and completion statistics",
+        "Address attention span research and cognitive load theory",
+        "Consider different subject matter and learning objectives"
+    ]
+    },
+    {
+    "id": "58",
+    "title": "Should social scoring systems be implemented globally?",
+    "category": "Society",
+    "difficulty": "advanced",
+    "description": "Debate behavioral scoring versus privacy and freedom concerns.",
+    "estimatedTime": 25,
+    "aiPersonality": "Privacy advocate and socially conscious",
+    "tips": [
+        "Compare social accountability benefits with surveillance concerns",
+        "Address cultural differences and implementation challenges",
+        "Consider alternative approaches to behavior modification"
+    ]
+    },
+    {
+    "id": "59",
+    "title": "Is cloud computing more secure than local storage?",
+    "category": "Technology",
+    "difficulty": "intermediate",
+    "description": "Compare cloud security with on-premise data control.",
+    "estimatedTime": 18,
+    "aiPersonality": "Security-focused and technically detailed",
+    "tips": [
+        "Compare security incident statistics and response capabilities",
+        "Address data sovereignty and regulatory compliance",
+        "Consider cost and complexity of enterprise security"
+    ]
+    },
+    {
+    "id": "60",
+    "title": "Should AI monitor employee productivity?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Debate workplace AI surveillance versus employee privacy.",
+    "estimatedTime": 20,
+    "aiPersonality": "Worker rights focused and technology-aware",
+    "tips": [
+        "Compare productivity gains with employee trust erosion",
+        "Address legal and ethical boundaries of monitoring",
+        "Consider impact on workplace culture and creativity"
+    ]
+    },
+    {
+    "id": "61",
+    "title": "Is desalination the solution to water scarcity?",
+    "category": "Science",
+    "difficulty": "intermediate",
+    "description": "Examine seawater desalination versus environmental costs.",
+    "estimatedTime": 20,
+    "aiPersonality": "Water policy expert and environmentally conscious",
+    "tips": [
+        "Compare energy requirements and carbon footprint",
+        "Address brine disposal and marine ecosystem impact",
+        "Consider cost-effectiveness versus conservation alternatives"
+    ]
+    },
+    {
+    "id": "62",
+    "title": "Should children have smartphones before age 12?",
+    "category": "Society",
+    "difficulty": "beginner",
+    "description": "Debate early smartphone access versus developmental concerns.",
+    "estimatedTime": 15,
+    "aiPersonality": "Child development focused and technology-aware",
+    "tips": [
+        "Present research on screen time and social development",
+        "Address safety benefits versus addiction risks",
+        "Consider parental control options and digital literacy education"
+    ]
+    },
+    {
+    "id": "63",
+    "title": "Is personalized medicine worth privacy trade-offs?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Compare genetic data benefits with privacy risks.",
+    "estimatedTime": 25,
+    "aiPersonality": "Medical privacy expert and patient-centered",
+    "tips": [
+        "Compare treatment effectiveness improvements with data risks",
+        "Address discrimination concerns and data security",
+        "Consider consent models and patient control options"
+    ]
+    },
+    {
+    "id": "64",
+    "title": "Should schools eliminate letter grades entirely?",
+    "category": "Education",
+    "difficulty": "intermediate",
+    "description": "Debate alternative assessment versus traditional grading.",
+    "estimatedTime": 18,
+    "aiPersonality": "Assessment reform advocate and academically rigorous",
+    "tips": [
+        "Compare motivation and learning outcome effects",
+        "Address college admission and employer expectations",
+        "Consider implementation challenges and parent communication"
+    ]
+    },
+    {
+    "id": "65",
+    "title": "Is voice technology making us lazier or more efficient?",
+    "category": "Technology",
+    "difficulty": "beginner",
+    "description": "Examine smart speakers impact on productivity and skills.",
+    "estimatedTime": 15,
+    "aiPersonality": "Human behavior expert and technology-balanced",
+    "tips": [
+        "Compare time savings with skill atrophy concerns",
+        "Address accessibility benefits for disabled users",
+        "Consider cognitive load reduction versus dependency risks"
+    ]
+    },
+    {
+    "id": "66",
+    "title": "Should companies disclose environmental impact?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Debate mandatory environmental reporting versus business costs.",
+    "estimatedTime": 18,
+    "aiPersonality": "Sustainability advocate and business-practical",
+    "tips": [
+        "Compare transparency benefits with competitive disadvantages",
+        "Address standardization needs and reporting costs",
+        "Consider investor demand and regulatory trends"
+    ]
+    },
+    {
+    "id": "67",
+    "title": "Is renewable energy storage ready to replace fossils?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Examine battery technology for complete renewable transition.",
+    "estimatedTime": 25,
+    "aiPersonality": "Energy transition expert and technically informed",
+    "tips": [
+        "Compare storage capacity and grid stability requirements",
+        "Address cost trends and technological breakthrough needs",
+        "Consider geographic and seasonal variability challenges"
+    ]
+    },
+    {
+    "id": "68",
+    "title": "Should cities implement congestion pricing?",
+    "category": "Society",
+    "difficulty": "intermediate",
+    "description": "Debate road pricing benefits versus accessibility concerns.",
+    "estimatedTime": 18,
+    "aiPersonality": "Urban policy expert and equity-focused",
+    "tips": [
+        "Compare traffic reduction with low-income impact",
+        "Address revenue allocation and public transit investment",
+        "Consider alternative traffic management strategies"
+    ]
+    },
+    {
+    "id": "69",
+    "title": "Is AI biased or are humans projecting bias?",
+    "category": "Technology",
+    "difficulty": "advanced",
+    "description": "Examine AI bias origins and algorithmic responsibility.",
+    "estimatedTime": 25,
+    "aiPersonality": "AI ethics expert and technically nuanced",
+    "tips": [
+        "Distinguish between training data bias and algorithmic bias",
+        "Address bias detection and mitigation strategies",
+        "Consider human oversight versus algorithmic transparency"
+    ]
+    },
+    {
+    "id": "70",
+    "title": "Should universities offer VR-only degrees?",
+    "category": "Education",
+    "difficulty": "intermediate",
+    "description": "Compare immersive VR education with campus experiences.",
+    "estimatedTime": 20,
+    "aiPersonality": "Educational technology enthusiast and experience-focused",
+    "tips": [
+        "Compare learning outcomes and skill acquisition",
+        "Address social interaction and networking opportunities",
+        "Consider cost accessibility and technology requirements"
+    ]
+    },
+    {
+    "id": "71",
+    "title": "Is corporate whistleblowing moral duty or betrayal?",
+    "category": "Business",
+    "difficulty": "advanced",
+    "description": "Debate employee responsibility versus organizational loyalty.",
+    "estimatedTime": 22,
+    "aiPersonality": "Ethics-focused and legally informed",
+    "tips": [
+        "Compare public interest with loyalty obligations",
+        "Address legal protections and retaliation risks",
+        "Consider internal reporting alternatives and effectiveness"
+    ]
+    },
+    {
+    "id": "72",
+    "title": "Should genetic modification eliminate hereditary diseases?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Debate gene editing for disease prevention versus diversity.",
+    "estimatedTime": 30,
+    "aiPersonality": "Medical ethics expert and scientifically rigorous",
+    "tips": [
+        "Compare therapeutic benefits with genetic diversity concerns",
+        "Address consent issues for future generations",
+        "Consider access equality and enhancement temptations"
+    ]
+    },
+    {
+    "id": "73",
+    "title": "Is digital minimalism beneficial in hyperconnected world?",
+    "category": "Society",
+    "difficulty": "beginner",
+    "description": "Examine reduced technology use versus connectivity needs.",
+    "estimatedTime": 15,
+    "aiPersonality": "Wellness-focused and digitally balanced",
+    "tips": [
+        "Compare mental health benefits with professional requirements",
+        "Address FOMO and social isolation concerns",
+        "Consider gradual reduction strategies and alternatives"
+    ]
+    },
+    {
+    "id": "74",
+    "title": "Should algorithms decide loan approvals?",
+    "category": "Technology",
+    "difficulty": "intermediate",
+    "description": "Debate AI lending decisions versus human judgment.",
+    "estimatedTime": 20,
+    "aiPersonality": "Financial fairness advocate and data-driven",
+    "tips": [
+        "Compare bias reduction with algorithmic discrimination",
+        "Address transparency and explainability requirements",
+        "Consider appeals processes and human oversight needs"
+    ]
+    },
+    {
+    "id": "75",
+    "title": "Is project-based learning superior to lectures?",
+    "category": "Education",
+    "difficulty": "intermediate",
+    "description": "Compare hands-on projects with traditional instruction.",
+    "estimatedTime": 18,
+    "aiPersonality": "Progressive educator and evidence-based",
+    "tips": [
+        "Compare skill retention and real-world application",
+        "Address resource requirements and scalability",
+        "Consider different subject areas and learning objectives"
+    ]
+    },
+    {
+    "id": "76",
+    "title": "Should businesses adopt stakeholder capitalism?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Debate multi-stakeholder models versus profit maximization.",
+    "estimatedTime": 20,
+    "aiPersonality": "Business strategy expert and socially conscious",
+    "tips": [
+        "Compare long-term value creation with short-term returns",
+        "Address measurement challenges and accountability",
+        "Consider competitive advantages and market pressures"
+    ]
+    },
+    {
+    "id": "77",
+    "title": "Is synthetic biology key to solving climate change?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Examine engineered organisms versus natural solutions.",
+    "estimatedTime": 25,
+    "aiPersonality": "Climate solution expert and biotechnology-aware",
+    "tips": [
+        "Compare scalability potential with ecological risks",
+        "Address regulatory frameworks and public acceptance",
+        "Consider integration with existing climate strategies"
+    ]
+    },
+    {
+    "id": "78",
+    "title": "Should digital art be valued equally to traditional art?",
+    "category": "Society",
+    "difficulty": "beginner",
+    "description": "Debate NFTs and digital artwork versus physical art.",
+    "estimatedTime": 15,
+    "aiPersonality": "Art market expert and culturally aware",
+    "tips": [
+        "Compare artistic merit with medium preferences",
+        "Address ownership and authenticity in digital formats",
+        "Consider accessibility and democratization benefits"
+    ]
+    },
+    {
+    "id": "79",
+    "title": "Is edge computing more important than cloud?",
+    "category": "Technology",
+    "difficulty": "advanced",
+    "description": "Compare distributed processing with centralized infrastructure.",
+    "estimatedTime": 22,
+    "aiPersonality": "Infrastructure expert and performance-focused",
+    "tips": [
+        "Compare latency benefits with infrastructure complexity",
+        "Address security and management considerations",
+        "Consider hybrid approaches and use case optimization"
+    ]
+    },
+    {
+    "id": "80",
+    "title": "Should emotional intelligence be taught in schools?",
+    "category": "Education",
+    "difficulty": "beginner",
+    "description": "Debate emotional skills versus traditional academics.",
+    "estimatedTime": 15,
+    "aiPersonality": "Social-emotional learning advocate and developmentally aware",
+    "tips": [
+        "Compare life success factors with academic achievement",
+        "Address curriculum time constraints and teacher training",
+        "Consider age-appropriate implementation and assessment"
+    ]
+    },
+    {
+    "id": "81",
+    "title": "Is sustainable investing more profitable?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Compare ESG investing returns with traditional strategies.",
+    "estimatedTime": 18,
+    "aiPersonality": "Investment analyst and sustainability-focused",
+    "tips": [
+        "Compare long-term performance data and risk profiles",
+        "Address greenwashing and ESG rating reliability",
+        "Consider market trends and regulatory influences"
+    ]
+    },
+    {
+    "id": "82",
+    "title": "Should marine protected areas be expanded globally?",
+    "category": "Science",
+    "difficulty": "intermediate",
+    "description": "Debate ocean conservation versus fishing industry impacts.",
+    "estimatedTime": 20,
+    "aiPersonality": "Marine conservation expert and economically aware",
+    "tips": [
+        "Compare biodiversity benefits with economic displacement",
+        "Address enforcement challenges and international cooperation",
+        "Consider sustainable fishing alternatives and compensation"
+    ]
+    },
+    {
+    "id": "83",
+    "title": "Is universal internet access a human right?",
+    "category": "Society",
+    "difficulty": "intermediate",
+    "description": "Debate internet connectivity rights versus infrastructure costs.",
+    "estimatedTime": 18,
+    "aiPersonality": "Digital rights advocate and policy-focused",
+    "tips": [
+        "Compare access equality with infrastructure investment needs",
+        "Address privacy and content regulation concerns",
+        "Consider alternative delivery methods and public-private partnerships"
+    ]
+    },
+    {
+    "id": "84",
+    "title": "Should robots replace humans in dangerous jobs?",
+    "category": "Technology",
+    "difficulty": "intermediate",
+    "description": "Examine robot safety benefits versus job displacement.",
+    "estimatedTime": 18,
+    "aiPersonality": "Worker safety advocate and automation-aware",
+    "tips": [
+        "Compare injury reduction with employment impacts",
+        "Address retraining opportunities and transition support",
+        "Consider human skills that robots cannot replace"
+    ]
+    },
+    {
+    "id": "85",
+    "title": "Is lifelong learning essential for career success?",
+    "category": "Education",
+    "difficulty": "beginner",
+    "description": "Debate continuous education versus specialized expertise.",
+    "estimatedTime": 15,
+    "aiPersonality": "Career development expert and future-oriented",
+    "tips": [
+        "Compare adaptability benefits with depth of expertise",
+        "Address time and resource constraints for working adults",
+        "Consider industry-specific learning requirements and trends"
+    ]
+    },
+    {
+    "id": "86",
+    "title": "Should companies adopt circular economy principles?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Compare waste reduction models with linear production.",
+    "estimatedTime": 20,
+    "aiPersonality": "Sustainability expert and business-practical",
+    "tips": [
+        "Compare resource efficiency with implementation costs",
+        "Address supply chain complexity and consumer behavior",
+        "Consider regulatory incentives and competitive advantages"
+    ]
+    },
+    {
+    "id": "87",
+    "title": "Is carbon removal technology necessary for climate goals?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Debate direct air capture versus emission reduction priorities.",
+    "estimatedTime": 25,
+    "aiPersonality": "Climate policy expert and technologically informed",
+    "tips": [
+        "Compare carbon budget requirements with current reduction rates",
+        "Address energy requirements and cost-effectiveness",
+        "Consider moral hazard and incentive alignment issues"
+    ]
+    },
+    {
+    "id": "88",
+    "title": "Should social media algorithms be transparent?",
+    "category": "Society",
+    "difficulty": "intermediate",
+    "description": "Debate algorithmic transparency versus platform advantages.",
+    "estimatedTime": 18,
+    "aiPersonality": "Digital transparency advocate and tech-savvy",
+    "tips": [
+        "Compare user empowerment with trade secret protection",
+        "Address manipulation concerns and informed consent",
+        "Consider regulatory approaches and implementation challenges"
+    ]
+    },
+    {
+    "id": "89",
+    "title": "Is 5G technology worth health concerns and costs?",
+    "category": "Technology",
+    "difficulty": "intermediate",
+    "description": "Examine 5G benefits versus deployment risks and expenses.",
+    "estimatedTime": 20,
+    "aiPersonality": "Telecommunications expert and health-conscious",
+    "tips": [
+        "Compare connectivity benefits with health research findings",
+        "Address infrastructure costs and energy consumption",
+        "Consider alternative technologies and gradual deployment"
+    ]
+    },
+    {
+    "id": "90",
+    "title": "Should arts education be prioritized equally with STEM?",
+    "category": "Education",
+    "difficulty": "beginner",
+    "description": "Debate balanced education versus STEM economic focus.",
+    "estimatedTime": 15,
+    "aiPersonality": "Arts advocate and holistically minded",
+    "tips": [
+        "Compare creativity benefits with economic competitiveness",
+        "Address funding constraints and resource allocation",
+        "Consider interdisciplinary approaches and career diversity"
+    ]
+    },
+    {
+    "id": "91",
+    "title": "Is corporate social responsibility genuine or marketing?",
+    "category": "Business",
+    "difficulty": "intermediate",
+    "description": "Examine authentic responsibility versus greenwashing.",
+    "estimatedTime": 18,
+    "aiPersonality": "Corporate accountability expert and skeptically minded",
+    "tips": [
+        "Compare measurable impact with promotional messaging",
+        "Address transparency and third-party verification",
+        "Consider stakeholder pressure and competitive dynamics"
+    ]
+    },
+    {
+    "id": "92",
+    "title": "Should artificial reefs replace damaged natural reefs?",
+    "category": "Science",
+    "difficulty": "intermediate",
+    "description": "Debate artificial reef technology versus natural restoration.",
+    "estimatedTime": 20,
+    "aiPersonality": "Marine biology expert and restoration-focused",
+    "tips": [
+        "Compare ecosystem functionality and biodiversity support",
+        "Address cost-effectiveness and long-term sustainability",
+        "Consider hybrid approaches and natural recovery potential"
+    ]
+    },
+    {
+    "id": "93",
+    "title": "Is digital privacy dead in the big data age?",
+    "category": "Society",
+    "difficulty": "advanced",
+    "description": "Examine data collection realities versus privacy expectations.",
+    "estimatedTime": 22,
+    "aiPersonality": "Privacy expert and realistically pessimistic",
+    "tips": [
+        "Compare convenience benefits with privacy trade-offs",
+        "Address regulatory effectiveness and enforcement challenges",
+        "Consider technological solutions and user empowerment"
+    ]
+    },
+    {
+    "id": "94",
+    "title": "Should predictive policing algorithms be used?",
+    "category": "Technology",
+    "difficulty": "advanced",
+    "description": "Debate crime prediction benefits versus bias concerns.",
+    "estimatedTime": 25,
+    "aiPersonality": "Criminal justice expert and civil liberties focused",
+    "tips": [
+        "Compare crime prevention benefits with discrimination risks",
+        "Address transparency and accountability in law enforcement",
+        "Consider community policing alternatives and trust building"
+    ]
+    },
+    {
+    "id": "95",
+    "title": "Is peer review the best system for validating research?",
+    "category": "Science",
+    "difficulty": "advanced",
+    "description": "Examine traditional peer review versus alternative validation.",
+    "estimatedTime": 25,
+    "aiPersonality": "Academic expert and reform-minded",
+    "tips": [
+        "Compare quality control with publication speed and bias",
+        "Address reviewer expertise and conflict of interest",
+        "Consider open science alternatives and post-publication review"
+    ]
+    },
+    {
+    "id": "96",
+    "title": "Should skill-based hiring replace degree requirements?",
+    "category": "Business",
+    "difficulty": "beginner",
+    "description": "Debate competency-based employment versus educational credentials.",
+    "estimatedTime": 15,
+    "aiPersonality": "HR expert and merit-focused",
+    "tips": [
+        "Compare job performance with educational background correlation",
+        "Address skill assessment challenges and bias reduction",
+        "Consider career advancement and professional development"
+    ]
+    },
+    {
+    "id": "97",
+    "title": "Is mindfulness meditation effective for academic performance?",
+    "category": "Education",
+    "difficulty": "beginner",
+    "description": "Examine meditation benefits versus time allocation concerns.",
+    "estimatedTime": 15,
+    "aiPersonality": "Wellness educator and evidence-based",
+    "tips": [
+        "Compare stress reduction with academic time investment",
+        "Address implementation challenges and teacher training",
+        "Consider age-appropriate practices and cultural sensitivity"
+    ]
+    },
+    {
+    "id": "98",
+    "title": "Should human consciousness be digitally preserved?",
+    "category": "Technology",
+    "difficulty": "advanced",
+    "description": "Debate digital immortality versus natural life cycles.",
+    "estimatedTime": 30,
+    "aiPersonality": "Futurist philosopher and ethically complex",
+    "tips": [
+        "Compare identity continuity with resource allocation ethics",
+        "Address technical feasibility and consciousness definition",
+        "Consider social implications and equality of access"
+    ]
+    },
+    {
+    "id": "99",
+    "title": "Is urban agriculture the future of food production?",
+    "category": "Science",
+    "difficulty": "intermediate",
+    "description": "Examine city farming versus traditional rural agriculture.",
+    "estimatedTime": 20,
+    "aiPersonality": "Urban planning expert and food security focused",
+    "tips": [
+        "Compare yield efficiency with land use optimization",
+        "Address transportation costs and carbon footprint",
+        "Consider scalability and integration with existing systems"
+    ]
+    },
+    {
+    "id": "100",
+    "title": "Should emotional AI be used in healthcare decisions?",
+    "category": "Technology",
+    "difficulty": "advanced",
+    "description": "Debate emotion-detecting AI in medical diagnosis and treatment.",
+    "estimatedTime": 25,
+    "aiPersonality": "Medical AI expert and patient-centered",
+    "tips": [
+        "Compare diagnostic accuracy with privacy invasion concerns",
+        "Address cultural differences in emotional expression",
+        "Consider human empathy versus algorithmic consistency"
+    ]
+    }
+]

@@ -15,14 +15,11 @@ interface LeaderboardUser {
   tier: string;
   gamesPlayed: number;
   winRate: number;
-  winStreak: number;
-  level: number;
 }
 
 const LeaderboardPage: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTier, setSelectedTier] = useState('all');
   const [sortBy, setSortBy] = useState<'rating' | 'games' | 'winRate'>('rating');
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
@@ -41,7 +38,6 @@ const LeaderboardPage: React.FC = () => {
           tier: data.tier,
           gamesPlayed: data.gamesPlayed,
           winRate: data.win_rate,
-          winStreak: data.winStreak,
           level: data.level,
           rank: idx + 1, // Assign rank based on sorted order
         };
@@ -52,10 +48,8 @@ const LeaderboardPage: React.FC = () => {
   }, []);
 
   const filteredLeaderboard = leaderboard.filter(player => {
-    const matchesSearch = player.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         player.username.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTier = selectedTier === 'all' || player.tier === selectedTier;
-    return matchesSearch && matchesTier;
+    return player.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           player.username.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   const sortedLeaderboard = [...filteredLeaderboard].sort((a, b) => {
@@ -71,18 +65,7 @@ const LeaderboardPage: React.FC = () => {
     }
   });
 
-  const tiers = ['all', 'diamond', 'platinum', 'gold', 'silver', 'bronze'];
 
-  const getTierColor = (tier: string) => {
-    switch (tier) {
-      case 'diamond': return 'bg-gradient-to-r from-blue-400 to-purple-500 text-white';
-      case 'platinum': return 'bg-gradient-to-r from-cyan-400 to-cyan-500 text-white';
-      case 'gold': return 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white';
-      case 'silver': return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white';
-      case 'bronze': return 'bg-gradient-to-r from-amber-600 to-amber-700 text-white';
-      default: return 'bg-gray-200 text-gray-800';
-    }
-  };
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -186,20 +169,7 @@ const LeaderboardPage: React.FC = () => {
                 />
               </div>
 
-              {/* Tier Filter */}
-              <select
-                value={selectedTier}
-                onChange={(e) => setSelectedTier(e.target.value)}
-                className="px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {tiers.map(tier => (
-                  <option key={tier} value={tier} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                    {tier === 'all' ? 'All Tiers' : tier.charAt(0).toUpperCase() + tier.slice(1)}
-                  </option>
-                ))}
-              </select>
-
-              {/* Sort By */}
+{/* Sort By */}
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
@@ -226,11 +196,8 @@ const LeaderboardPage: React.FC = () => {
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Rank</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Player</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Rating</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Tier</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Games</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Win Rate</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">Streak</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Level</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Win Rate</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -272,27 +239,16 @@ const LeaderboardPage: React.FC = () => {
                           {player.rating}
                         </div>
                       </td>
-                      <td className="px-6 py-4 border-r border-gray-200 dark:border-gray-700">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTierColor(player.tier)}`}> 
-                          {player.tier}
-                        </span>
-                      </td>
                       <td className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
                         {player.gamesPlayed}
                       </td>
-                      <td className="px-6 py-4 border-r border-gray-200 dark:border-gray-700">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-gray-900 dark:text-white">
-                            {player.winRate}%
+                            {Math.round((player.winRate || 0) * 100)}%
                           </span>
                           <TrendingUp className="w-4 h-4 text-green-500" />
                         </div>
-                      </td>
-                      <td className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
-                        {player.winStreak}
-                      </td>
-                      <td className="px-6 py-4 text-gray-900 dark:text-white">
-                        {player.level}
                       </td>
                     </motion.tr>
                   ))}

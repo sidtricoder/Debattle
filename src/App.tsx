@@ -21,6 +21,7 @@ import ContactPage from './pages/ContactPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import './index.css';
+import UsersDebateRoom2 from './components/debate/UsersDebateRoom2';
 
 function useProximityScrollbar() {
   useEffect(() => {
@@ -141,6 +142,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <UsersDebatePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/custom-debate/:id"
+              element={
+                <ProtectedRoute>
+                  <UsersDebateRoom2 />
                 </ProtectedRoute>
               }
             />

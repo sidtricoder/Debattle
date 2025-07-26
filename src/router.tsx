@@ -2,6 +2,7 @@ import React, { lazy } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import UsersDebatePage from '@/pages/UsersDebatePage';
+import UsersDebateRoom2 from '@/components/debate/UsersDebateRoom2';
 
 const HomePage = lazy(() => import('@/pages/LandingPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
@@ -28,6 +29,7 @@ const router = createBrowserRouter([
       </div>
     </ProtectedRoute> 
   },
+  { path: '/custom-debate/:id', element: <ProtectedRoute><UsersDebateRoom2 /></ProtectedRoute> },
   { path: '/debate/new', element: <ProtectedRoute><NewDebatePage /></ProtectedRoute> },
   { path: '/find-debate', element: <ProtectedRoute><NewDebatePage /></ProtectedRoute> },
   { path: '/leaderboard', element: <ProtectedRoute><LeaderboardPage /></ProtectedRoute> },

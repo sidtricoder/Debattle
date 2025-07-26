@@ -230,14 +230,6 @@ const Header: React.FC = () => {
                           <User className="w-4 h-4" />
                           <span>Profile</span>
                         </Link>
-                        <Link
-                          to="/settings"
-                          className="flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => setIsUserMenuOpen(false)}
-                        >
-                          <Settings className="w-4 h-4" />
-                          <span>Settings</span>
-                        </Link>
                         <button
                           onClick={handleSignOut}
                           className="flex items-center space-x-3 w-full px-4 py-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"

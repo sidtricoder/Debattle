@@ -1,5 +1,5 @@
 import { firestore } from '../../lib/firebase';
-import { collection, doc, setDoc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, query, where, getDocs, deleteDoc, increment, limit } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
 const QUEUE_COLLECTION = 'matchmakingQueue';
@@ -163,7 +163,7 @@ export const markUsersAsMatched = async (user1Id: string, user2Id: string) => {
 };
 
 // Create a new debate room
-export const createDebateRoom = async (topic: string, user1: string, user2: string, user1Rating: number, user2Rating: number, user1Username?: string, user2Username?: string): Promise<string> => {
+export const createDebateRoom = async (topic: string, topicId: string, user1: string, user2: string, user1Rating: number, user2Rating: number, user1Username?: string, user2Username?: string): Promise<string> => {
   // Create a new document reference with auto-generated ID
   const newDebateRef = doc(collection(firestore, 'debates'));
   
@@ -212,6 +212,7 @@ export const createDebateRoom = async (topic: string, user1: string, user2: stri
 
   const newDebate = {
     topic: topic,
+    topicId: topicId,
     participants,
     arguments: [],
     status: 'waiting' as const,
@@ -226,6 +227,24 @@ export const createDebateRoom = async (topic: string, user1: string, user2: stri
 
   await setDoc(newDebateRef, newDebate);
   console.log('[DEBUG] Created debate with Firestore ID:', newDebateRef.id);
+  
+  // Increment topic usage count using direct topicId reference
+  try {
+    console.log(`[DEBUG] Incrementing usage count for topicId: ${topicId}`);
+    
+    const topicRef = doc(firestore, 'topics', topicId);
+    
+    // Atomically increment the usageCount
+    await updateDoc(topicRef, {
+      usageCount: increment(1)
+    });
+    
+    console.log(`[DEBUG] Successfully incremented usage count for topic: "${topic}" (ID: ${topicId})`);
+  } catch (error) {
+    console.error(`[DEBUG] Error incrementing topic usage for topicId ${topicId}:`, error);
+    // Don't fail the debate creation if topic update fails
+  }
+  
   return newDebateRef.id;
 };
 
