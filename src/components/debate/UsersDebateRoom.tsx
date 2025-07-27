@@ -701,7 +701,7 @@ export const UsersDebateRoom: React.FC = () => {
   })();
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col bg-black text-white" style={{background: '#000'}}>
+    <div className="relative min-h-screen w-full flex flex-col bg-black text-white">
       {/* Always show header at the top */}
       <div className="w-full flex items-center justify-between px-6 py-4 bg-black/80 border-b border-gray-800" style={{position: 'sticky', top: 0, left: 0, zIndex: 50}}>
         <div className="flex items-center gap-4">
@@ -866,20 +866,66 @@ export const UsersDebateRoom: React.FC = () => {
       </div>
       
       {/* Input area - show voting for visitors, argument input for debaters */}
-      <div className="w-full bg-[#101010] border-t border-gray-800 px-2 md:px-8 py-4 flex flex-col gap-0 sticky bottom-0 z-20" style={{boxShadow: '0 -2px 16px 0 #0008'}}>
-        {/* Drag handle */}
-        <div 
-          ref={dragHandleRef}
-          className="flex justify-center py-2 cursor-ns-resize hover:bg-gray-800/50 transition-colors"
-          onMouseDown={(e) => {
-            draggingRef.current = true;
-            lastYRef.current = e.clientY;
-          }}
-        >
-          <div className="w-16 h-1.5 rounded bg-gray-700" />
+      <div className="w-full bg-gradient-to-b from-gray-900 to-gray-950 border-t border-gray-800 px-2 md:px-8 py-4 flex flex-col gap-0 sticky bottom-0 z-20" style={{boxShadow: '0 -2px 16px 0 #0008'}}>
+      {!isDebater ? (
+  // Voting UI for non-debaters
+  <div className="flex flex-col items-center gap-4">
+    {!hasVoted && debate?.status === 'active' ? (
+      // Show voting buttons if user hasn't voted and debate is active
+      <>
+        <div className="text-gray-300 text-sm font-medium">Vote for the winning side:</div>
+        <div className="flex justify-center gap-4 w-full">
+          <Button
+            onClick={() => handleVote('pro')}
+            className="px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl hover:scale-105 transform transition-all duration-300"
+          >
+            👍 Vote Pro
+          </Button>
+          <Button
+            onClick={() => handleVote('con')}
+            className="px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-red-500 to-pink-600 text-white hover:from-red-600 hover:to-pink-700 shadow-lg hover:shadow-xl hover:scale-105 transform transition-all duration-300"
+          >
+            👎 Vote Con
+          </Button>
         </div>
-        {/* Argument input */}
-        <div className="flex items-center gap-3">
+      </>
+    ) : hasVoted && debate?.status === 'active' ? (
+      // Show vote submitted message if user has voted but debate hasn't ended
+      <div className="text-center">
+        <div className="text-green-400 text-lg font-semibold mb-2">
+          ✅ Vote Submitted!
+        </div>
+        <div className="text-gray-300 text-sm">
+          Thanks for voting! Your vote has been recorded.
+        </div>
+      </div>
+    ) : debate?.status === 'completed' ? (
+      // Show debate ended message if debate has completed
+      <div className="text-center">
+        <div className="text-gray-400 text-lg font-semibold mb-2">
+          🏁 Debate Has Ended
+        </div>
+        <div className="text-gray-300 text-sm">
+          Check the results below to see who won!
+        </div>
+      </div>
+    ) : null}
+  </div>
+) : (
+          // Original input area for debaters
+          <>
+            {/* Drag handle */}
+            <div 
+              ref={dragHandleRef}
+              className="flex justify-center py-2 cursor-ns-resize hover:bg-gray-800/50 transition-colors"
+              onMouseDown={(e) => {
+                draggingRef.current = true;
+                lastYRef.current = e.clientY;
+              }}
+            >
+              <div className="w-16 h-1.5 rounded bg-gray-700" />
+            </div>
+            <div className="flex items-center gap-3">
           {/* Clipboard icon on the left */}
           <button
             onClick={handleCopyShare}
@@ -951,11 +997,13 @@ export const UsersDebateRoom: React.FC = () => {
               <SendIcon className="w-5 h-5" />
             )}
           </Button>
-        </div>
+            </div>
+          </>
+        )}
       </div>
-      
+
       {/* After the chat area, but before the modals, add a new section for winner and scores if debate is completed and judgment is present */}
-      {isDebateCompleted && debate.judgment && (() => {
+      {isDebateCompleted && debate?.judgment && (() => {
         const judgment = debate.judgment;
         // Winner: try userId, then displayName
         let winnerId = judgment.winner;
