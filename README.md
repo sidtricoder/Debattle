@@ -1,8 +1,8 @@
-# Debattle - The Chess.com of Debating
+# Debattle - The Ultimate Debating Platform
 
 A modern, real-time debate platform built with React 19, TypeScript, and Vite. Challenge opponents worldwide, improve your argumentation skills, and climb the global leaderboard with our AI-powered judging system.
 
-![Debattle](https://img.shields.io/badge/Debattle-v1.0.0-blue)
+![Debattle](https://img.shields.io/badge/Debattle-v2.0.0-blue)
 ![React](https://img.shields.io/badge/React-19-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
 ![Vite](https://img.shields.io/badge/Vite-5.0-orange)
@@ -15,6 +15,7 @@ A modern, real-time debate platform built with React 19, TypeScript, and Vite. C
 - **AI-Powered Judging** - Get instant feedback and scoring from Google Gemini AI
 - **ELO Rating System** - Fair competitive ranking system with tier progression
 - **Practice Mode** - Hone your skills against AI opponents with different personalities
+- **Custom User vs User Debates** - Challenge opponents worldwide
 - **Global Leaderboard** - Compete with debaters worldwide
 - **Achievement System** - Unlock badges and track your progress
 
@@ -136,35 +137,6 @@ A modern, real-time debate platform built with React 19, TypeScript, and Vite. C
 7. **Open your browser**
    Navigate to `http://localhost:5173`
 
-## 🏗️ Project Structure
-
-```
-debattle/
-├── public/                 # Static assets
-├── src/
-│   ├── components/         # Reusable UI components
-│   │   ├── auth/          # Authentication components
-│   │   ├── common/        # Common UI components
-│   │   ├── dashboard/     # Dashboard components
-│   │   ├── debate/        # Debate interface components
-│   │   ├── layout/        # Layout components
-│   │   ├── leaderboard/   # Leaderboard components
-│   │   ├── profile/       # Profile components
-│   │   └── ui/            # Base UI components
-│   ├── hooks/             # Custom React hooks
-│   ├── lib/               # Utility libraries
-│   ├── pages/             # Page components
-│   ├── services/          # API and external services
-│   ├── stores/            # Zustand state stores
-│   ├── styles/            # Global styles
-│   ├── types/             # TypeScript type definitions
-│   └── utils/             # Utility functions
-├── .env                   # Environment variables
-├── package.json           # Dependencies and scripts
-├── tailwind.config.js     # Tailwind configuration
-├── tsconfig.json          # TypeScript configuration
-└── vite.config.ts         # Vite configuration
-```
 
 ## 🎮 Usage
 
@@ -266,8 +238,7 @@ npm run type-check   # Run TypeScript type checking
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/sidtricoder/debattle/issues)
-- **Discord**: [Join our community](https://discord.gg/debattle)
+- **Issues**: [GitHub Issues](https://github.com/sidtricoder/debattle-new/issues)
 - **Email**: sid.dev.2006@gmail.com
 
 ## 🔮 Roadmap
@@ -276,20 +247,21 @@ npm run type-check   # Run TypeScript type checking
 - ✅ Basic debate interface
 - ✅ User authentication
 - ✅ Leaderboard system
-- ✅ Practice mode
+- ✅ Practice with AI
 
 ### Phase 2 (Current)
 - ✅ Real-time debate rooms
 - ✅ AI judging integration
 - ✅ Custom User vs User debates
 - ✅ Spectator and Voting mode
+- ✅ Tournament mode in custom debate
 
 ### Phase 3 (Coming soon...)
 - 🔄 Voice/video debates
 - 🔄 Advanced analytics
 - 🔄 Mobile app
 - 🔄 API for third-party integrations
-- 🔄 Custom debate analysis model
+- 🔄 Custom debate analysis ML model
 
 ---
 
