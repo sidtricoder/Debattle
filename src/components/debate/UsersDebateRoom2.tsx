@@ -43,6 +43,7 @@ interface DebateParticipant {
   userId: string;
   displayName: string;
   stance: 'pro' | 'con';
+  joinedAt?: number;
 }
 
 interface Debate {
@@ -53,12 +54,14 @@ interface Debate {
   status: 'waiting' | 'active' | 'completed';
   currentTurn: string; // userId of current turn
   currentRound: number;
+  currentTeam: 'pro' | 'con'; // which team's turn it is
+  turnOrder: string[]; // cyclical turn order of userIds
   judgment?: any;
   ratings?: Record<string, number>;
   ratingChanges?: Record<string, number>;
   createdAt: Date;
-  proVotes?: number;
-  conVotes?: number;
+  // proVotes?: number;
+  // conVotes?: number;
   customSettings?: {
     rounds?: number;
     timePerUser?: number;
@@ -71,12 +74,14 @@ export const UsersDebateRoom: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: currentUser, refreshUserData } = useAuthStore();
-  const { joinDebate } = useDebateStore();
+  const { joinDebate, endDebate } = useDebateStore();
   
   // State
   const [debate, setDebate] = useState<Debate | null>(null);
   const [argument, setArgument] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showStanceModal, setShowStanceModal] = useState(false);
+  const [selectedStance, setSelectedStance] = useState<'pro' | 'con'>('pro');
   // Use customSettings for timer and rounds if present
   const maxRounds = debate?.customSettings?.rounds || 5;
   const turnTimeSeconds = debate?.customSettings?.timePerUser || 60;
@@ -117,7 +122,7 @@ export const UsersDebateRoom: React.FC = () => {
   const recognitionRef = useRef<any>(null);
 
   // Add voting state
-  const [hasVoted, setHasVoted] = useState<boolean>(false);
+  // const [hasVoted, setHasVoted] = useState<boolean>(false);
 
   // Add state for copy success
   const [copySuccess, setCopySuccess] = useState(false);
@@ -171,7 +176,7 @@ export const UsersDebateRoom: React.FC = () => {
 
     const unsub = onSnapshot(
       doc(firestore, 'debates', id),
-      (docSnap) => {
+      async (docSnap) => {
         console.log('[DEBUG] UsersDebateRoom: onSnapshot callback triggered');
         console.log('[DEBUG] UsersDebateRoom: docSnap.exists():', docSnap.exists());
         console.log('[DEBUG] UsersDebateRoom: docSnap.id:', docSnap.id);
@@ -181,37 +186,77 @@ export const UsersDebateRoom: React.FC = () => {
           console.log('[DEBUG] UsersDebateRoom: Raw Firestore data:', rawData);
 
           const debateData = { id: docSnap.id, ...rawData } as Debate;
-          console.log('[DEBUG] UsersDebateRoom: Processed debate data:', debateData);
+          console.log('[DEBUG] UsersDebateRoom: Parsed debate data:', debateData);
+
+          // Fix turnOrder if it's missing or incomplete
+          if (debateData.participants && debateData.participants.length > 0) {
+            const currentTurnOrder = debateData.turnOrder || [];
+            const allParticipantIds = debateData.participants.map(p => p.userId);
+            const missingFromTurnOrder = allParticipantIds.filter(id => !currentTurnOrder.includes(id));
+            
+            if (missingFromTurnOrder.length > 0) {
+              console.log('[DEBUG] Missing participants from turnOrder:', missingFromTurnOrder);
+              
+              // Create proper turn order: alternate between pro and con teams
+              const proUsers = debateData.participants.filter(p => p.stance === 'pro').map(p => p.userId);
+              const conUsers = debateData.participants.filter(p => p.stance === 'con').map(p => p.userId);
+              const newTurnOrder = [];
+              const maxLength = Math.max(proUsers.length, conUsers.length);
+              
+              for (let i = 0; i < maxLength; i++) {
+                if (i < proUsers.length) newTurnOrder.push(proUsers[i]);
+                if (i < conUsers.length) newTurnOrder.push(conUsers[i]);
+              }
+              
+              console.log('[DEBUG] Updating turnOrder:', newTurnOrder);
+              
+              // Update the debate with the correct turnOrder
+              try {
+                await updateDoc(doc(firestore, 'debates', id), {
+                  turnOrder: newTurnOrder,
+                  currentTurn: newTurnOrder[0] || debateData.currentTurn
+                });
+                debateData.turnOrder = newTurnOrder;
+                if (!debateData.currentTurn && newTurnOrder.length > 0) {
+                  debateData.currentTurn = newTurnOrder[0];
+                }
+              } catch (error) {
+                console.error('[DEBUG] Failed to update turnOrder:', error);
+              }
+            }
+          }
 
           setDebate(debateData);
-          
-          // Create participant details when debate loads
-          if (debateData.participants) {
-            console.log('[DEBUG] UsersDebateRoom: About to create participant details for:', debateData.participants);
-            createParticipantDetails(debateData.participants).catch(error => {
-              console.error('[DEBUG] UsersDebateRoom: Failed to create participant details:', error);
-            });
-          }
-          
-          setIsLoading(false);
+          createParticipantDetails(debateData.participants || []);
 
+          // Check if current user is a participant
+          const isParticipant = debateData.participants?.some(p => p.userId === currentUser?.uid);
+          console.log('[DEBUG] UsersDebateRoom: Is participant?', isParticipant);
+
+          if (!isParticipant && debateData.status === 'waiting') {
+            setShowStanceModal(true);
+          }
+
+          // Show judgment if debate is completed
           if (debateData.status === 'completed' && debateData.judgment) {
             setShowJudgment(true);
             setShowWinner(true);
           }
+
+          // Check if it's the current user's turn
+          const myTurn = debateData.currentTurn === currentUser?.uid && debateData.status === 'active';
+          setIsMyTurn(myTurn);
+          console.log('[DEBUG] UsersDebateRoom: Is my turn?', myTurn, 'Current turn:', debateData.currentTurn, 'My UID:', currentUser?.uid);
+
+          setIsLoading(false);
         } else {
-          console.error('[DEBUG] UsersDebateRoom: Debate not found in Firestore:', id);
+          console.log('[DEBUG] UsersDebateRoom: Document does not exist');
           setError('Debate not found');
           setIsLoading(false);
         }
       },
       (error) => {
-        console.error('[DEBUG] UsersDebateRoom: Error subscribing to debate:', error);
-        console.error('[DEBUG] UsersDebateRoom: Error details:', {
-          code: error.code,
-          message: error.message,
-          stack: error.stack,
-        });
+        console.error('[DEBUG] UsersDebateRoom: onSnapshot error:', error);
         setError('Failed to load debate');
         setIsLoading(false);
       }
@@ -325,16 +370,56 @@ export const UsersDebateRoom: React.FC = () => {
     if (id && currentUser && debate) {
       const alreadyParticipant = debate.participants.some(p => p.userId === currentUser.uid);
       if (!alreadyParticipant) {
-        // Assign stance: if pro is taken, join as con; else join as pro
-        const proTaken = debate.participants.some(p => p.stance === 'pro');
-        const stance = proTaken ? 'con' : 'pro';
-        console.log(`[DEBUG] Attempting to join debate ${id} as ${stance} (${currentUser.uid})`);
-        joinDebate(id, currentUser.uid, stance)
-          .then(() => console.log('[DEBUG] joinDebate successful'))
-          .catch(err => console.error('Failed to join debate:', err));
+        // Show stance selection modal for new users
+        setShowStanceModal(true);
       }
     }
   }, [id, currentUser, debate]);
+
+  // Handle stance selection and join debate
+  const handleJoinWithStance = async (stance: 'pro' | 'con') => {
+    if (!id || !currentUser) return;
+    
+    try {
+      console.log(`[DEBUG] Attempting to join debate ${id} as ${stance} (${currentUser.uid})`);
+      await joinDebate(id, currentUser.uid, stance);
+      console.log('[DEBUG] joinDebate successful');
+      setShowStanceModal(false);
+      
+      // Always update turn order to include all participants
+      if (debate) {
+        const updatedParticipants = [...debate.participants, {
+          userId: currentUser.uid,
+          displayName: currentUser.displayName || currentUser.email || 'Unknown',
+          stance,
+          joinedAt: Date.now()
+        }];
+        
+        // Create turn order: alternate between pro and con teams
+        const proUsers = updatedParticipants.filter(p => p.stance === 'pro').map(p => p.userId);
+        const conUsers = updatedParticipants.filter(p => p.stance === 'con').map(p => p.userId);
+        const turnOrder = [];
+        const maxLength = Math.max(proUsers.length, conUsers.length);
+        
+        for (let i = 0; i < maxLength; i++) {
+          if (i < proUsers.length) turnOrder.push(proUsers[i]);
+          if (i < conUsers.length) turnOrder.push(conUsers[i]);
+        }
+        
+        console.log('[DEBUG] Updated turn order for all participants:', turnOrder);
+        console.log('[DEBUG] Pro users:', proUsers);
+        console.log('[DEBUG] Con users:', conUsers);
+        
+        await updateDoc(doc(firestore, 'debates', id), {
+          turnOrder,
+          currentTeam: 'pro', // Start with pro team
+          currentTurn: turnOrder[0] || ''
+        });
+      }
+    } catch (err) {
+      console.error('Failed to join debate:', err);
+    }
+  };
 
   // Determine if it's my turn
   useEffect(() => {
@@ -358,7 +443,7 @@ export const UsersDebateRoom: React.FC = () => {
           handleAutoSubmit();
           
           // If this was the last round, end the debate
-          if (debate.currentRound > maxRounds) {
+          if (debate.currentRound >= maxRounds) {
             console.log('[DEBUG] UsersDebateRoom: Timer expired on last round, ending debate');
             setTimeout(() => handleEndDebate(), 1000); // Small delay to allow auto-submit to complete
           }
@@ -398,16 +483,27 @@ export const UsersDebateRoom: React.FC = () => {
       };
       // Add argument
       const updatedArguments = [...(debate.arguments || []), newArgument];
-      // Only increment currentRound after both debaters have submitted for this round
+      
+      // Calculate next turn using cyclical team-based system
+      const currentTurnIndex = debate.turnOrder.indexOf(currentUser.uid);
+      const nextTurnIndex = (currentTurnIndex + 1) % debate.turnOrder.length;
+      const nextUserId = debate.turnOrder[nextTurnIndex];
+      const nextUser = debate.participants.find(p => p.userId === nextUserId);
+      const nextTeam = nextUser?.stance || (debate.currentTeam === 'pro' ? 'con' : 'pro');
+      
+      // Increment round only after everyone in the turn order has had a turn
       let updatedCurrentRound = debate.currentRound;
-      if (updatedArguments.length % 2 === 0) {
+      if (debate.turnOrder.length > 0 && (updatedArguments.length % debate.turnOrder.length === 0)) {
         updatedCurrentRound = debate.currentRound + 1;
       }
-      // End debate after MAX_ROUNDS rounds (i.e., MAX_ROUNDS*2 arguments)
-      const shouldEnd = updatedCurrentRound > maxRounds;
+      
+      // End debate after maxRounds complete rounds
+      const shouldEnd = updatedCurrentRound >= maxRounds;
+      
       await updateDoc(doc(firestore, 'debates', debate.id), {
         arguments: updatedArguments,
-        currentTurn: debate.participants.find(p => p.userId !== currentUser.uid)?.userId || '',
+        currentTurn: nextUserId,
+        currentTeam: nextTeam,
         currentRound: updatedCurrentRound,
         status: shouldEnd ? 'completed' : 'active',
       });
@@ -435,14 +531,26 @@ export const UsersDebateRoom: React.FC = () => {
         wordCount: 0,
       };
       const updatedArguments = [...(debate.arguments || []), newArgument];
+      
+      // Calculate next turn using cyclical team-based system
+      const currentTurnIndex = debate.turnOrder.indexOf(currentUser.uid);
+      const nextTurnIndex = (currentTurnIndex + 1) % debate.turnOrder.length;
+      const nextUserId = debate.turnOrder[nextTurnIndex];
+      const nextUser = debate.participants.find(p => p.userId === nextUserId);
+      const nextTeam = nextUser?.stance || (debate.currentTeam === 'pro' ? 'con' : 'pro');
+      
+      // Increment round only after everyone in the turn order has had a turn
       let updatedCurrentRound = debate.currentRound;
-      if (updatedArguments.length % 2 === 0) {
+      if (debate.turnOrder.length > 0 && (updatedArguments.length % debate.turnOrder.length === 0)) {
         updatedCurrentRound = debate.currentRound + 1;
       }
-      const isLastRound = updatedCurrentRound > maxRounds;
+      
+      const isLastRound = updatedCurrentRound >= maxRounds;
+      
       await updateDoc(doc(firestore, 'debates', debate.id), {
         arguments: updatedArguments,
-        currentTurn: debate.participants.find(p => p.userId !== currentUser.uid)?.userId || '',
+        currentTurn: nextUserId,
+        currentTeam: nextTeam,
         currentRound: updatedCurrentRound,
         status: isLastRound ? 'completed' : 'active',
       });
@@ -477,54 +585,55 @@ export const UsersDebateRoom: React.FC = () => {
       }
       
       // Prepare prompt for judge
-      const prompt = `You are an expert debate judge. Given the following debate, return ONLY a valid JSON object with these fields:\n{\n  "winner": "<userId of winner>",\n  "scores": {\n    "<userId1>": <score, float, 1 decimal>,\n    "<userId2>": <score, float, 1 decimal>\n  },\n  "feedback": {\n    "<userId1>": ["<feedback1>", ...],\n    "<userId2>": ["<feedback1>", ...]\n  },\n  "reasoning": "<reasoning>",\n  "highlights": ["<highlight1>", ...],\n  "learningPoints": ["<point1>", ...]\n}\nDo NOT use stance or displayName as keys. Use userId only.\nDebate data:\nTOPIC: ${debate.topic}\nPARTICIPANTS: ${debate.participants.map(p => `- ${p.displayName} (userId: ${p.userId}, stance: ${p.stance.toUpperCase()})`).join(' ')}\nARGUMENTS: ${debate.arguments.map(arg => `ROUND ${arg.round} - ${debate.participants.find(p => p.userId === arg.userId)?.displayName}: \"${arg.content}\"`).join(' ')}`;
+      const proParticipants = debate.participants.filter(p => p.stance === 'pro');
+      const conParticipants = debate.participants.filter(p => p.stance === 'con');
+      
+      const argumentsText = debate.arguments.map(arg => {
+        const participant = debate.participants.find(p => p.userId === arg.userId);
+        return `ROUND ${arg.round} - ${participant?.stance.toUpperCase()} TEAM - ${participant?.displayName}: "${arg.content}"`;
+      }).join('\n');
+      
+      const prompt = `YOU ARE AN EXPERT DEBATE JUDGE EVALUATING A PRO VS CON TOURNAMENT. GIVEN THE FOLLOWING DEBATE, RETURN ONLY A VALID JSON OBJECT WITH THESE FIELDS:\n{\n  "winningTeam": "pro" OR "con",\n  "teamScores": {\n    "pro": <TEAM SCORE, FLOAT, 1 DECIMAL>,\n    "con": <TEAM SCORE, FLOAT, 1 DECIMAL>\n  },\n  "individualScores": {\n    "<userId1>": <INDIVIDUAL SCORE, FLOAT, 1 DECIMAL>,\n    "<userId2>": <INDIVIDUAL SCORE, FLOAT, 1 DECIMAL>\n  },\n  "individualFeedback": {\n    "<userId1>": ["<FEEDBACK1>", "<FEEDBACK2>"],\n    "<userId2>": ["<FEEDBACK1>", "<FEEDBACK2>"]\n  },\n  "teamFeedback": {\n    "pro": ["<TEAM FEEDBACK1>"],\n    "con": ["<TEAM FEEDBACK1>"]\n  },\n  "reasoning": "<OVERALL REASONING FOR THE DECISION>",\n  "highlights": ["<BEST ARGUMENT OR MOMENT>"],\n  "learningPoints": ["<WHAT PARTICIPANTS CAN LEARN>"]\n}\n\nEVALUATE EACH PARTICIPANT INDIVIDUALLY (SCORE 0-10) AND PROVIDE TEAM SCORES. CONSIDER ARGUMENT QUALITY, EVIDENCE, REBUTTALS, AND OVERALL PERSUASIVENESS.\n\nDO NOT USE STANCE OR DISPLAYNAME AS KEYS. USE USERID ONLY.\n\nDEBATE DATA:\nTOPIC: ${debate.topic}\n\nPRO TEAM: ${proParticipants.map(p => `${p.displayName} (${p.userId})`).join(', ')}\nCON TEAM: ${conParticipants.map(p => `${p.displayName} (${p.userId})`).join(', ')}\n\nARGUMENTS:\n${argumentsText}`;
+
 
         // Map aiModel to judgeWithGroq model string
         const judgeModel = aiModel === 'llama' ? 'llama-3.3-70b-versatile' : aiModel === 'gemma' ? 'gemma2-9b-it' : 'llama-3.3-70b-versatile';
         // Get AI judgment
         const response = await judgeWithGroq(prompt, judgeModel);
+        console.log('[DEBUG] AI Judge Raw Response:', response);
         const jsonMatch = response.match(/\{[\s\S]*\}/);
         const judgment = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-      
+        console.log('[DEBUG] AI Judge Parsed Judgment:', judgment);
       // Get AI winner stance
       const aiWinnerId = judgment?.winner;
       const aiWinnerParticipant = debate.participants.find(p => p.userId === aiWinnerId);
       const aiWinnerStance = aiWinnerParticipant?.stance;
-      // Get voting winner stance and margin
-      const proVotes = debate.proVotes || 0;
-      const conVotes = debate.conVotes || 0;
-      let votingWinnerStance: 'pro' | 'con' | 'draw' = 'draw';
-      let voteMargin = 0;
-      if (proVotes > conVotes) {
-        votingWinnerStance = 'pro';
-        voteMargin = proVotes - conVotes;
-      } else if (conVotes > proVotes) {
-        votingWinnerStance = 'con';
-        voteMargin = conVotes - proVotes;
-      }
-      // Determine final winner
-      let isDraw = false;
-      if (
-        aiWinnerStance &&
-        votingWinnerStance !== 'draw' &&
-        aiWinnerStance !== votingWinnerStance &&
-        voteMargin >= 10
-      ) {
-        isDraw = true;
-      }
-      // If draw, set both as winner and award 5 points each
-      let finalWinnerId = aiWinnerId;
-      let customJudgment = { ...judgment };
-      if (isDraw) {
-        finalWinnerId = null;
-        customJudgment.winner = 'Draw';
-        customJudgment.reasoning = 'AI and voting results differ by a margin of at least 10 votes. Declared as draw.';
-        // Optionally, set scores/feedback for both
-      }
+
+      // Voting logic is commented out.
+      const isDraw = false; // Default to false as voting is disabled
+      const finalWinnerId = aiWinnerId;
+      const customJudgment = { ...judgment };
       // Calculate new ratings/points
       let ratings: Record<string, number> | null = null;
       let ratingChanges: Record<string, number> | null = null;
       if (debate.ratings) {
+        // if (isDraw) {
+        //   // Award both 5 points (or custom logic)
+        //   ratings = { ...debate.ratings };
+        //   ratingChanges = {} as Record<string, number>;
+        //   for (const userId of Object.keys(ratings)) {
+        //     ratingChanges[userId] = 5;
+        //     ratings[userId] += 5;
+        //   }
+        // } else if (finalWinnerId) {
+        //   ratings = calculateDebateRatings(debate.ratings, finalWinnerId);
+        //   ratingChanges = {} as Record<string, number>;
+        //   for (const userId of Object.keys(ratings)) {
+        //     const oldRating = debate.ratings[userId];
+        //     const newRating = ratings[userId];
+        //     ratingChanges[userId] = newRating - oldRating;
+        //   }
+        // }
         if (isDraw) {
           // Award both 5 points (or custom logic)
           ratings = { ...debate.ratings };
@@ -556,55 +665,9 @@ export const UsersDebateRoom: React.FC = () => {
         }
         await refreshUserData();
       }
-      // Update debate with custom judgment, ratings, and rating changes
-      const updatedDebate = {
-        ...debate,
-        status: 'completed',
-        judgment: customJudgment,
-        ratings,
-        ratingChanges,
-        endedAt: Date.now(),
-        endReason: 'manual',
-      };
-      await updateDoc(doc(firestore, 'debates', debate.id), updatedDebate);
+      // Use debateStore.endDebate to handle all updates (prevents double stats counting)
+      await endDebate(debate.id, customJudgment);
       setShowJudgment(true);
-
-      // Update user stats for all participants
-      if (debate && debate.participants && judgment) {
-        for (const participant of debate.participants) {
-          const userRef = doc(firestore, 'users', participant.userId);
-          const userSnap = await getDoc(userRef);
-          if (!userSnap.exists()) continue;
-          const userData = userSnap.data();
-          let wins = userData.wins || 0;
-          let losses = userData.losses || 0;
-          let draws = userData.draws || 0;
-          let gamesPlayed = userData.gamesPlayed || 0;
-          // Determine result for this participant
-          let isDraw = judgment.winner === 'Draw' || judgment.winner === 'draw';
-          let isWin = judgment.winner === participant.userId;
-          let isLoss = !isDraw && !isWin;
-          if (isDraw) {
-            draws += 1;
-          } else if (isWin) {
-            wins += 1;
-          } else if (isLoss) {
-            losses += 1;
-          }
-          gamesPlayed += 1;
-          // Only update stats, not rating
-          await updateDoc(userRef, {
-            wins,
-            losses,
-            draws,
-            gamesPlayed,
-            win_rate: gamesPlayed > 0 ? wins / gamesPlayed : 0,
-            last_active: new Date(),
-            updated_at: new Date(),
-            provisionalRating: gamesPlayed >= 5 ? false : userData.provisionalRating
-          });
-        }
-      }
     } catch (error) {
       console.error('Error ending debate:', error);
       // Still end the debate even if judgment fails
@@ -623,7 +686,7 @@ export const UsersDebateRoom: React.FC = () => {
   // Auto end debate after maxRounds
   useEffect(() => {
     if (!debate) return;
-    if (debate.currentRound > maxRounds && debate.status === 'active') {
+    if (debate.currentRound >= maxRounds && debate.status === 'active') {
       console.log('[DEBUG] UsersDebateRoom: Max rounds exceeded, ending debate');
       handleEndDebate();
     }
@@ -633,25 +696,25 @@ export const UsersDebateRoom: React.FC = () => {
   const isDebater = debate?.participants.some(p => p.userId === currentUser?.uid);
 
   // Voting handler
-  const handleVote = async (vote: 'pro' | 'con') => {
-    if (!debate || !currentUser || isDebater || hasVoted) return;
-    const debateRef = doc(firestore, 'debates', debate.id);
-    try {
-      await updateDoc(debateRef, {
-        [vote === 'pro' ? 'proVotes' : 'conVotes']: (debate[vote === 'pro' ? 'proVotes' : 'conVotes'] || 0) + 1
-      });
-      setHasVoted(true);
-      localStorage.setItem(`debate_voted_${debate.id}_${currentUser.uid}`, '1');
-    } catch (e) {
-      console.error('Failed to vote:', e);
-    }
-  };
+  // const handleVote = async (vote: 'pro' | 'con') => {
+  //   if (!debate || !currentUser || isDebater || hasVoted) return;
+  //   const debateRef = doc(firestore, 'debates', debate.id);
+  //   try {
+  //     await updateDoc(debateRef, {
+  //       [vote === 'pro' ? 'proVotes' : 'conVotes']: (debate[vote === 'pro' ? 'proVotes' : 'conVotes'] || 0) + 1
+  //     });
+  //     setHasVoted(true);
+  //     localStorage.setItem(`debate_voted_${debate.id}_${currentUser.uid}`, '1');
+  //   } catch (e) {
+  //     console.error('Failed to vote:', e);
+  //   }
+  // };
   // On mount, check if user has already voted
-  useEffect(() => {
-    if (debate && currentUser) {
-      setHasVoted(!!localStorage.getItem(`debate_voted_${debate.id}_${currentUser.uid}`));
-    }
-  }, [debate, currentUser]);
+  // useEffect(() => {
+  //   if (debate && currentUser) {
+  //     setHasVoted(!!localStorage.getItem(`debate_voted_${debate.id}_${currentUser.uid}`));
+  //   }
+  // }, [debate, currentUser]);
 
   // Copy to clipboard handler
   const handleCopyShare = () => {
@@ -713,6 +776,10 @@ export const UsersDebateRoom: React.FC = () => {
   // Helper to get score for a participant
   const getScore = (judgment: any, participant: any): number | null => {
     if (!judgment) return null;
+    // Try individualScores first (Firebase structure)
+    if (judgment.individualScores?.[participant.userId] !== undefined) return judgment.individualScores[participant.userId];
+    if (judgment.individualScores?.[participant.displayName] !== undefined) return judgment.individualScores[participant.displayName];
+    // Fallback to scores (legacy structure)
     if (judgment.scores?.[participant.userId] !== undefined) return judgment.scores[participant.userId];
     if (judgment.scores?.[participant.displayName] !== undefined) return judgment.scores[participant.displayName];
     return null;
@@ -721,19 +788,21 @@ export const UsersDebateRoom: React.FC = () => {
   const getFeedback = (judgment: any, participant: any): string[] => {
     if (!judgment) return [];
     return (
+      judgment.individualFeedback?.[participant.userId] ||
+      judgment.individualFeedback?.[participant.displayName] ||
       judgment.feedback?.[participant.userId] ||
       judgment.feedback?.[participant.displayName] ||
       []
     );
   };
 
-  const votingWinnerLabel = (() => {
-    const proVotes = debate?.proVotes || 0;
-    const conVotes = debate?.conVotes || 0;
-    if (proVotes > conVotes) return 'Pro';
-    if (conVotes > proVotes) return 'Con';
-    return 'Draw';
-  })();
+  // const votingWinnerLabel = (() => {
+  //   const proVotes = debate?.proVotes || 0;
+  //   const conVotes = debate?.conVotes || 0;
+  //   if (proVotes > conVotes) return 'Pro';
+  //   if (conVotes > proVotes) return 'Con';
+  //   return 'Draw';
+  // })();
 
   return (
     <div className="relative min-h-screen w-full flex flex-col bg-black text-white" style={{background: '#000'}}>
@@ -771,42 +840,42 @@ export const UsersDebateRoom: React.FC = () => {
         </button>
       </div>
       
-      {/* Participants Info Bar */}
+      {/* Teams Info Bar */}
       {debate && (
         <div className="w-full bg-[#0a0a0a] border-b border-gray-800 px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
-              {/* Opponent (Left Side) */}
+              {/* Left Team */}
               <div className="flex items-center gap-3">
                 <img
-                  src={otherParticipant?.stance === 'pro' ? '/pro-left.png' : '/con-left.png'}
-                  alt={otherParticipant?.displayName}
+                  src={myParticipant?.stance === 'pro' ? '/con-left.png' : '/pro-left.png'}
+                  alt="Opposition Team"
                   className="w-8 h-8 object-contain rounded-full border border-gray-600"
                 />
                 <div className="text-sm">
                   <div className="font-semibold text-white">
-                    {otherParticipant?.displayName}
+                    {myParticipant?.stance === 'pro' ? 'CON TEAM' : 'PRO TEAM'}
                   </div>
                   <div className="text-gray-400 text-xs">
-                    {otherParticipant?.stance?.toUpperCase() || 'UNKNOWN'}
+                    {debate.participants.filter(p => p.stance === (myParticipant?.stance === 'pro' ? 'con' : 'pro')).length} members
                   </div>
                 </div>
               </div>
               {/* VS Separator */}
               <div className="text-gray-500 text-sm font-medium">VS</div>
-              {/* Current User (Right Side) */}
+              {/* Right Team (Current User's Team) */}
               <div className="flex items-center gap-3">
                 <div className="text-sm text-right">
                   <div className="font-semibold text-white">
-                    <span className="font-bold text-green-400">{myParticipant?.displayName}</span>
+                    <span className="font-bold text-green-400">{myParticipant?.stance === 'pro' ? 'PRO TEAM' : 'CON TEAM'}</span>
                   </div>
                   <div className="text-gray-400 text-xs">
-                    {myParticipant?.stance?.toUpperCase() || 'UNKNOWN'}
+                    {debate.participants.filter(p => p.stance === myParticipant?.stance).length} members
                   </div>
                 </div>
                 <img
                   src={myParticipant?.stance === 'pro' ? '/pro-right.png' : '/con-right.png'}
-                  alt={myParticipant?.displayName}
+                  alt="Your Team"
                   className="w-8 h-8 object-contain rounded-full border border-gray-600"
                 />
               </div>
@@ -816,7 +885,7 @@ export const UsersDebateRoom: React.FC = () => {
               <div className="flex items-center gap-2 text-sm">
                 <div className={`w-2 h-2 rounded-full ${isMyTurn ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
                 <span className="text-gray-400">
-                  {isMyTurn ? 'Your turn' : `${otherParticipant?.displayName}'s turn`}
+                  {isMyTurn ? 'Your turn' : `${debate.currentTeam?.toUpperCase()} team's turn`}
                 </span>
               </div>
             )}
@@ -848,12 +917,19 @@ export const UsersDebateRoom: React.FC = () => {
               const isPro = participant?.stance === 'pro';
               const isCon = participant?.stance === 'con';
               const isMine = arg.userId === currentUser?.uid;
-            
-              const avatarSrc = isMine ? (isPro ? '/pro-right.png' : '/con-right.png') : (isCon ? '/con-left.png' : '/pro-left.png');
               
-              // Alignment: current user always on right, opponent always on left
-              const alignment = isMine ? 'justify-end' : 'justify-start';
-              const bubbleAlign = isMine ? 'flex-row-reverse' : 'flex-row';
+              // Determine alignment based on user's stance and message stance
+              // If user is PRO: show PRO messages on right, CON on left
+              // If user is CON: show CON messages on right, PRO on left
+              const userIsPro = myParticipant?.stance === 'pro';
+              const showOnRight = userIsPro ? isPro : isCon;
+              
+              const avatarSrc = showOnRight ? 
+                (isPro ? '/pro-right.png' : '/con-right.png') : 
+                (isPro ? '/pro-left.png' : '/con-left.png');
+              
+              const alignment = showOnRight ? 'justify-end' : 'justify-start';
+              const bubbleAlign = showOnRight ? 'flex-row-reverse' : 'flex-row';
               
               return (
                 <div
@@ -871,7 +947,7 @@ export const UsersDebateRoom: React.FC = () => {
                     {/* Bubble */}
                     <div
                       className={`rounded-2xl px-5 py-3 shadow-lg text-base whitespace-pre-line break-words
-                        ${isMine ? (isPro ? 'bg-[#1a1a1a] text-green-200 border-r-4 border-green-500' : 'bg-[#181a22] text-red-200 border-l-4 border-red-500') : (isCon ? 'bg-[#181a22] text-red-200 border-l-4 border-red-500' : 'bg-[#1a1a1a] text-green-200 border-r-4 border-green-500')}
+                        ${showOnRight ? (isPro ? 'bg-[#1a1a1a] text-green-200 border-r-4 border-green-500' : 'bg-[#181a22] text-red-200 border-r-4 border-red-500') : (isPro ? 'bg-[#1a1a1a] text-green-200 border-l-4 border-green-500' : 'bg-[#181a22] text-red-200 border-l-4 border-red-500')}
                       `}
                       style={{minWidth: '0', flex: 1}}
                     >
@@ -901,7 +977,8 @@ export const UsersDebateRoom: React.FC = () => {
       </div>
       
       {/* Input area - show voting for visitors, argument input for debaters */}
-      <div className="w-full bg-[#101010] border-t border-gray-800 px-2 md:px-8 py-4 flex flex-col gap-0 sticky bottom-0 z-20" style={{boxShadow: '0 -2px 16px 0 #0008'}}>
+      {debate?.status === 'active' && (
+        <div className="w-full bg-[#101010] border-t border-gray-800 px-2 md:px-8 py-4 flex flex-col gap-0 sticky bottom-0 z-20" style={{boxShadow: '0 -2px 16px 0 #0008'}}>
         {/* Drag handle */}
         <div 
           ref={dragHandleRef}
@@ -987,22 +1064,37 @@ export const UsersDebateRoom: React.FC = () => {
             )}
           </Button>
         </div>
-      </div>
+        </div>
+      )}
       
       {/* After the chat area, but before the modals, add a new section for winner and scores if debate is completed and judgment is present */}
       {isDebateCompleted && debate.judgment && (() => {
         const judgment = debate.judgment;
-        // Winner: try userId, then displayName
+        // Handle Firebase judgment structure
         let winnerId = judgment.winner;
-        let winnerParticipant = debate.participants.find(
-          p => p.userId === winnerId || p.displayName === winnerId
-        );
-        let winnerName = winnerParticipant?.displayName || winnerId || "No winner";
-        // Scores: robust mapping
+        let winnerName = "No winner";
+        
+        // If we have winningTeam instead of individual winner
+        if (judgment.winningTeam && !winnerId) {
+          winnerName = judgment.winningTeam === 'pro' ? 'PRO Team' : 'CON Team';
+        } else if (winnerId) {
+          let winnerParticipant = debate.participants.find(
+            p => p.userId === winnerId || p.displayName === winnerId
+          );
+          winnerName = winnerParticipant?.displayName || winnerId || "No winner";
+        }
+        
+        // Scores: robust mapping for Firebase structure
         const getScore = (uid: string) => {
-          if (judgment.scores?.[uid] !== undefined) return judgment.scores[uid];
+          // Try individualScores first (Firebase structure)
+          if (judgment.individualScores?.[uid] !== undefined) return judgment.individualScores[uid];
           // Try to find by displayName if not found by userId
           const participant = debate.participants.find(p => p.displayName === uid);
+          if (participant && judgment.individualScores?.[participant.userId] !== undefined) {
+            return judgment.individualScores[participant.userId];
+          }
+          // Fallback to legacy scores structure
+          if (judgment.scores?.[uid] !== undefined) return judgment.scores[uid];
           if (participant && judgment.scores?.[participant.userId] !== undefined) {
             return judgment.scores[participant.userId];
           }
@@ -1052,13 +1144,13 @@ export const UsersDebateRoom: React.FC = () => {
       {isDebateCompleted && (
         <div className="flex justify-center mt-2">
           <div className="bg-gray-900 border border-gray-700 rounded-lg px-6 py-3 flex flex-col items-center gap-2">
-            <div className="flex gap-6">
+            {/* <div className="flex gap-6">
               <span className="text-green-400 font-bold">Pro votes: {debate?.proVotes || 0}</span>
               <span className="text-red-400 font-bold">Con votes: {debate?.conVotes || 0}</span>
-            </div>
-            <div className="text-sm text-gray-300 mt-1">
+            </div> */}
+            {/* <div className="text-sm text-gray-300 mt-1">
               Voting winner: {votingWinnerLabel}
-            </div>
+            </div> */}
           </div>
         </div>
       )}
@@ -1072,17 +1164,31 @@ export const UsersDebateRoom: React.FC = () => {
         <div className="p-6 max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
           {debate.judgment && (() => {
             const judgment = debate.judgment as typeof debate.judgment & { learningPoints?: string[] };
-            // Winner: try userId, then displayName
+            // Handle Firebase judgment structure
             let winnerId = judgment.winner;
-            let winnerParticipant = debate.participants.find(
-              p => p.userId === winnerId || p.displayName === winnerId
-            );
-            let winnerName = winnerParticipant?.displayName || winnerId || "No winner";
-            // Scores: robust mapping
+            let winnerName = "No winner";
+            
+            // If we have winningTeam instead of individual winner
+            if (judgment.winningTeam && !winnerId) {
+              winnerName = judgment.winningTeam === 'pro' ? 'PRO Team' : 'CON Team';
+            } else if (winnerId) {
+              let winnerParticipant = debate.participants.find(
+                p => p.userId === winnerId || p.displayName === winnerId
+              );
+              winnerName = winnerParticipant?.displayName || winnerId || "No winner";
+            }
+            
+            // Scores: robust mapping for Firebase structure
             const getScore = (uid: string) => {
-              if (judgment.scores?.[uid] !== undefined) return judgment.scores[uid];
+              // Try individualScores first (Firebase structure)
+              if (judgment.individualScores?.[uid] !== undefined) return judgment.individualScores[uid];
               // Try to find by displayName if not found by userId
               const participant = debate.participants.find(p => p.displayName === uid);
+              if (participant && judgment.individualScores?.[participant.userId] !== undefined) {
+                return judgment.individualScores[participant.userId];
+              }
+              // Fallback to legacy scores structure
+              if (judgment.scores?.[uid] !== undefined) return judgment.scores[uid];
               if (participant && judgment.scores?.[participant.userId] !== undefined) {
                 return judgment.scores[participant.userId];
               }
@@ -1157,6 +1263,81 @@ export const UsersDebateRoom: React.FC = () => {
           })()}
         </div>
       </Modal>
+
+      {/* Stance Selection Modal */}
+      {showStanceModal && (
+        <Modal
+          open={showStanceModal}
+          onClose={() => {}}
+        >
+          <div className="space-y-6 overflow-y-auto overflow-x-hidden p-1">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold mb-2">Choose Your Side</h2>
+              <h3 className="text-xl font-bold mb-2">Join the Tournament</h3>
+              <p className="text-gray-400">Choose which side you want to argue for in this debate:</p>
+              <p className="text-lg font-semibold mt-2 text-blue-400">{debate?.topic}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setSelectedStance('pro')}
+                className={`p-6 rounded-xl border-2 transition-all ${
+                  selectedStance === 'pro'
+                    ? 'border-green-500 bg-green-500/20'
+                    : 'border-gray-600 bg-gray-800/50 hover:border-green-400'
+                }`}
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <img
+                    src="/pro-right.png"
+                    alt="Pro"
+                    className="w-16 h-16 object-contain"
+                  />
+                  <div>
+                    <div className="text-lg font-bold text-green-400">PRO</div>
+                    <div className="text-sm text-gray-400">Argue in favor</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {debate?.participants.filter(p => p.stance === 'pro').length} members
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setSelectedStance('con')}
+                className={`p-6 rounded-xl border-2 transition-all ${
+                  selectedStance === 'con'
+                    ? 'border-red-500 bg-red-500/20'
+                    : 'border-gray-600 bg-gray-800/50 hover:border-red-400'
+                }`}
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <img
+                    src="/con-right.png"
+                    alt="Con"
+                    className="w-16 h-16 object-contain"
+                  />
+                  <div>
+                    <div className="text-lg font-bold text-red-400">CON</div>
+                    <div className="text-sm text-gray-400">Argue against</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {debate?.participants.filter(p => p.stance === 'con').length} members
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <Button
+              onClick={() => handleJoinWithStance(selectedStance)}
+              className="w-full"
+              disabled={!selectedStance}
+            >
+              Join as {selectedStance?.toUpperCase()} Team
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

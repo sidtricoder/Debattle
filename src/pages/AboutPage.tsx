@@ -176,6 +176,74 @@ const AboutPage: React.FC = () => {
             ))}
           </div>
         </section>
+
+        {/* How Ratings Are Calculated Section */}
+        <section className="mb-20">
+          <div className="max-w-4xl mx-auto text-center mb-16">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="text-3xl md:text-4xl font-bold mb-6"
+            >
+              How Ratings Are Calculated
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="text-lg text-secondary dark:text-gray-300"
+            >
+              Our platform uses a modified Elo rating system, similar to what's used in chess, to quantify your debate skills. Here's a simplified breakdown.
+            </motion.p>
+          </div>
+          <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8 text-left">
+            <motion.div 
+              className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm"
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <h3 className="text-xl font-bold mb-3 text-primary">The Core Idea</h3>
+              <p className="text-secondary dark:text-gray-300">
+                Your rating changes based on the outcome of your debates. Winning increases your rating, while losing decreases it. The magnitude of the change depends on the rating difference between you and your opponent.
+              </p>
+            </motion.div>
+            <motion.div 
+              className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm"
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <h3 className="text-xl font-bold mb-3 text-primary">Expected Outcome</h3>
+              <p className="text-secondary dark:text-gray-300">
+                The system calculates an "expected score" for each player. If you have a much higher rating, you're expected to win. Beating a much stronger opponent will earn you significantly more points than beating a weaker one.
+              </p>
+            </motion.div>
+            <motion.div 
+              className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm md:col-span-2"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <h3 className="text-xl font-bold mb-3 text-primary">The Formula</h3>
+              <p className="text-secondary dark:text-gray-300 mb-2">
+                The change in your rating is calculated using the following formula:
+              </p>
+              <code className="text-sm bg-gray-100 dark:bg-gray-900 p-2 rounded-md block text-center">
+                New Rating = Old Rating + K × (Actual Score - Expected Score)
+              </code>
+              <p className="text-sm text-secondary dark:text-gray-400 mt-2">
+                Where <strong>K</strong> is a constant (32 in our case) that determines rating volatility, <strong>Actual Score</strong> is 1 for a win, 0.5 for a draw, and 0 for a loss, and <strong>Expected Score</strong> is based on the rating difference.
+              </p>
+            </motion.div>
+          </div>
+        </section>
       </main>
       
       {/* Meet the Developer Section */}

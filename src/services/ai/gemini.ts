@@ -29,7 +29,7 @@ export interface ArgumentEvaluation {
 }
 
 class GeminiService {
-  private model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  private model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
   // Analyze a single argument
   async analyzeArgument(
