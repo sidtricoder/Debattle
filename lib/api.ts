@@ -176,6 +176,8 @@ Scoring criteria (0-100 each):
 - Rebuttal: Response to opponent's arguments
 - Overall: Weighted average considering debate flow
 
+Important: If no arguments were provided by any debater, declare a draw by setting the winner to null and providing equal scores.
+
 Confidence: How certain you are about the judgment (0-100)`;
     
     return prompt;
