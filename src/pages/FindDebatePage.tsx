@@ -34,6 +34,7 @@ const FindDebatePage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
+  const [sortOrder, setSortOrder] = useState('default');
   const [topics, setTopics] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showMatchmaking, setShowMatchmaking] = useState(false);
@@ -120,18 +121,28 @@ const FindDebatePage: React.FC = () => {
     { value: 'expert', label: 'Expert (10)', emoji: '💎' }
   ];
 
-  const filteredTopics = topics.filter(topic => {
-    const matchesSearch = topic.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         topic.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || topic.category.toLowerCase() === selectedCategory;
-    const matchesDifficulty = selectedDifficulty === 'all' || 
-      (selectedDifficulty === 'easy' && topic.difficulty <= 3) ||
-      (selectedDifficulty === 'medium' && topic.difficulty >= 4 && topic.difficulty <= 6) ||
-      (selectedDifficulty === 'hard' && topic.difficulty >= 7 && topic.difficulty <= 9) ||
-      (selectedDifficulty === 'expert' && topic.difficulty === 10);
-    
-    return matchesSearch && matchesCategory && matchesDifficulty;
-  });
+  const filteredTopics = topics
+    .filter(topic => {
+      const matchesSearch = topic.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           topic.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || topic.category.toLowerCase() === selectedCategory;
+      const matchesDifficulty = selectedDifficulty === 'all' || 
+        (selectedDifficulty === 'easy' && topic.difficulty <= 3) ||
+        (selectedDifficulty === 'medium' && topic.difficulty >= 4 && topic.difficulty <= 6) ||
+        (selectedDifficulty === 'hard' && topic.difficulty >= 7 && topic.difficulty <= 9) ||
+        (selectedDifficulty === 'expert' && topic.difficulty === 10);
+      
+      return matchesSearch && matchesCategory && matchesDifficulty;
+    })
+    .sort((a, b) => {
+      if (sortOrder === 'asc') {
+        return a.difficulty - b.difficulty;
+      }
+      if (sortOrder === 'desc') {
+        return b.difficulty - a.difficulty;
+      }
+      return 0; // Default order
+    });
 
   const getDifficultyColor = (difficulty: number) => {
     if (difficulty <= 3) return 'from-green-400 to-emerald-500';
@@ -236,8 +247,21 @@ const FindDebatePage: React.FC = () => {
                 </div>
                 {/* Difficulty Levels */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Difficulty Level</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-gray-200">Difficulty Level</h3>
+                    <div className="relative">
+                      <select
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value)}
+                        className="bg-gray-700 border-gray-600 rounded-md px-3 py-1 text-sm font-medium text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500"
+                      >
+                        <option value="default">Sort By</option>
+                        <option value="asc">Low to High</option>
+                        <option value="desc">High to Low</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                     {difficulties.map((difficulty) => {
                       const isActive = selectedDifficulty === difficulty.value;
                       return (

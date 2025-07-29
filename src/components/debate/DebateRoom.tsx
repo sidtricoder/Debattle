@@ -519,41 +519,65 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
     if (currentDebate.status === 'completed' || hasSubmittedEnd) return;
     setHasSubmittedEnd(true);
     setIsJudging(true);
-    try {
+    try 
+    {
       let judgment: any;
-      if (practiceSettings.aiProvider === 'gemini') {
-        judgment = await geminiService.judgeDebate(
-          currentDebate.topic,
-          currentDebate.arguments.map(arg => ({
-            id: arg.id,
-            userId: arg.userId,
-            content: arg.content,
-            stance: currentDebate.participants.find(p => p.userId === arg.userId)?.stance || 'pro',
-            round: arg.round
-          })),
-          currentDebate.participants.map(p => ({
-            userId: p.userId,
-            displayName: p.displayName,
-            stance: p.stance
-          }))
-        );
-      } else if (practiceSettings.aiProvider === 'llama' || practiceSettings.aiProvider === 'gemma') {
-        const prompt = buildJudgmentPrompt();
-        const model = practiceSettings.aiProvider === 'llama' ? 'llama-3.3-70b-versatile' : 'gemma2-9b-it';
-        const response = await judgeWithGroq(prompt, model);
-        if (!response) throw new Error('No response from Groq');
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('Invalid response from Groq');
-        judgment = JSON.parse(jsonMatch[0]);
+      if (currentDebate.arguments.length === 0) {
+        const participantIds = currentDebate.participants.map(p => p.userId);
+        const scores = participantIds.reduce((acc, userId) => {
+          acc[userId] = 0;
+          return acc;
+        }, {} as { [key: string]: number });
+
+        judgment = {
+          winner: '',
+          reasoning: 'The debate concluded with no arguments from either side, resulting in a draw.',
+          scores: scores,
+          learningPoints: [],
+          highlights: []
+        };
+
+      } 
+      else 
+      {
+        if (practiceSettings.aiProvider === 'gemini') {
+          judgment = await geminiService.judgeDebate(
+            currentDebate.topic,
+            currentDebate.arguments.map(arg => ({
+              id: arg.id,
+              userId: arg.userId,
+              content: arg.content,
+              stance: currentDebate.participants.find(p => p.userId === arg.userId)?.stance || 'pro',
+              round: arg.round
+            })),
+            currentDebate.participants.map(p => ({
+              userId: p.userId,
+              displayName: p.displayName,
+              stance: p.stance
+            }))
+          );
+        } 
+        else if (practiceSettings.aiProvider === 'llama' || practiceSettings.aiProvider === 'gemma') 
+        {
+          const prompt = buildJudgmentPrompt();
+          const model = practiceSettings.aiProvider === 'llama' ? 'llama-3.3-70b-versatile' : 'gemma2-9b-it';
+          const response = await judgeWithGroq(prompt, model);
+          if (!response) throw new Error('No response from Groq');
+          const jsonMatch = response.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) throw new Error('Invalid response from Groq');
+          judgment = JSON.parse(jsonMatch[0]);
+        }
       }
+      
       console.log('[DEBUG] Submitting judgment to Firestore:', judgment);
       await endDebate(debateId, judgment); // Only Firestore update triggers UI
       await updateDoc(doc(firestore, 'debates', debateId), {
         mode: isPracticeMode ? 'practice' : 'live',
         endedBy: currentUser?.uid || ''
       });
-      console.log('[DEBUG] AI judgment saved to Firestore:', judgment);
-    } catch (error) {
+      console.log('[DEBUG] AI judgment saved to Firestore:', judgment);}
+    
+    catch (error) {
       console.error('[DEBUG] Failed to end debate:', error);
     } finally {
       setIsJudging(false);
@@ -875,6 +899,11 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
     ? [...firebaseMessages, latestLocalArg].sort((a, b) => a.timestamp - b.timestamp)
     : firebaseMessages;
 
+  const chatArgumentsWithDisplayRound = chatArguments.map((arg, index) => ({
+    ...arg,
+    displayRound: Math.floor(index / 2) + 1,
+  }));
+
   // After all error/deleted/404 checks, but before rendering results:
   if (isDebateCompleted && !currentDebate.judgment) {
     return (
@@ -1027,7 +1056,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
             ) : (
               <>
                 {/* Merge backend and pending arguments, filter out duplicates */}
-                {chatArguments.map((arg, idx, arr) => {
+                {chatArgumentsWithDisplayRound.map((arg, idx, arr) => {
                   const participant = currentDebate.participants.find(p => p.userId === arg.userId) || myParticipant;
                   const isMine = arg.userId === currentUser?.uid;
                   // Always align current user's arguments to the right, others to the left
@@ -1074,7 +1103,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
                             <Badge variant={participant?.stance === 'pro' ? 'success' : 'error'} className="text-xs">
                               {participant?.stance?.toUpperCase()}
                             </Badge>
-                            <span className="text-xs text-gray-400">Round {arg.round}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">Round {arg.displayRound}</span>
                           </div>
                           <div className="mb-1 text-white/90">{arg.content}</div>
                           <div className="flex items-center gap-2 text-xs text-gray-400">

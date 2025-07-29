@@ -147,10 +147,11 @@ Please provide a comprehensive judgment in the following JSON format:
 }
 
 IMPORTANT:
-- Always provide a clear winner (the userId of the winning participant).
+- If no arguments were provided by any debater, declare a draw by setting the winner to null and providing equal scores.
+- Otherwise, always provide a clear winner (the userId of the winning participant).
 - Always provide a score for each participant as a float with one decimal place (e.g., 8.7).
 - Do not omit any fields from the JSON.
-- If you cannot determine a winner, choose the participant with the most persuasive arguments and evidence.
+- If you cannot determine a winner (and there are arguments), choose the participant with the most persuasive arguments and evidence.
 - The JSON must be valid and parseable.
 
 Evaluation criteria:
