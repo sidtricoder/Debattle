@@ -30,6 +30,18 @@ import {
 // const MAX_ROUNDS = 5;
 // const TURN_TIME_SECONDS = 60;
 
+/*
+NEW ROUND-ROBIN SYSTEM:
+- Each round, one participant from each team speaks
+- Multiple participants per team rotate across rounds
+- Example: PRO team has A,B and CON team has C
+  Round 1: A (PRO) vs C (CON)
+  Round 2: B (PRO) vs C (CON)  
+  Round 3: A (PRO) vs C (CON)
+- Timer is visible to all participants
+- Arguments are tagged with the round number
+*/
+
 interface DebateArgument {
   id: string;
   userId: string;
@@ -188,40 +200,45 @@ export const UsersDebateRoom: React.FC = () => {
           const debateData = { id: docSnap.id, ...rawData } as Debate;
           console.log('[DEBUG] UsersDebateRoom: Parsed debate data:', debateData);
 
-          // Fix turnOrder if it's missing or incomplete
+          // Initialize current turn if missing or incomplete
           if (debateData.participants && debateData.participants.length > 0) {
-            const currentTurnOrder = debateData.turnOrder || [];
-            const allParticipantIds = debateData.participants.map(p => p.userId);
-            const missingFromTurnOrder = allParticipantIds.filter(id => !currentTurnOrder.includes(id));
+            let shouldUpdate = false;
+            let updateData: any = {};
             
-            if (missingFromTurnOrder.length > 0) {
-              console.log('[DEBUG] Missing participants from turnOrder:', missingFromTurnOrder);
+            // Initialize currentRound if missing
+            if (!debateData.currentRound || debateData.currentRound < 1) {
+              debateData.currentRound = 1;
+              updateData.currentRound = 1;
+              shouldUpdate = true;
+            }
+            
+            // Set current turn based on round-robin system if missing or if both teams are present
+            const proUsers = debateData.participants.filter(p => p.stance === 'pro');
+            const conUsers = debateData.participants.filter(p => p.stance === 'con');
+            
+            if (proUsers.length > 0 && conUsers.length > 0) {
+              // Both teams are present, ensure proper turn management
+              const currentRound = debateData.currentRound || 1;
               
-              // Create proper turn order: alternate between pro and con teams
-              const proUsers = debateData.participants.filter(p => p.stance === 'pro').map(p => p.userId);
-              const conUsers = debateData.participants.filter(p => p.stance === 'con').map(p => p.userId);
-              const newTurnOrder = [];
-              const maxLength = Math.max(proUsers.length, conUsers.length);
-              
-              for (let i = 0; i < maxLength; i++) {
-                if (i < proUsers.length) newTurnOrder.push(proUsers[i]);
-                if (i < conUsers.length) newTurnOrder.push(conUsers[i]);
+              if (!debateData.currentTurn || !debateData.currentTeam) {
+                // Initialize with first pro speaker for round 1
+                const proSpeaker = proUsers[(currentRound - 1) % proUsers.length];
+                debateData.currentTurn = proSpeaker.userId;
+                debateData.currentTeam = 'pro';
+                updateData.currentTurn = proSpeaker.userId;
+                updateData.currentTeam = 'pro';
+                shouldUpdate = true;
+                console.log('[DEBUG] Initializing first speaker:', proSpeaker.userId, 'for round', currentRound);
               }
-              
-              console.log('[DEBUG] Updating turnOrder:', newTurnOrder);
-              
-              // Update the debate with the correct turnOrder
+            }
+            
+            if (shouldUpdate) {
               try {
-                await updateDoc(doc(firestore, 'debates', id), {
-                  turnOrder: newTurnOrder,
-                  currentTurn: newTurnOrder[0] || debateData.currentTurn
-                });
-                debateData.turnOrder = newTurnOrder;
-                if (!debateData.currentTurn && newTurnOrder.length > 0) {
-                  debateData.currentTurn = newTurnOrder[0];
-                }
+                await updateDoc(doc(firestore, 'debates', id), updateData);
+                // Update local data
+                Object.assign(debateData, updateData);
               } catch (error) {
-                console.error('[DEBUG] Failed to update turnOrder:', error);
+                console.error('[DEBUG] Failed to update debate initialization:', error);
               }
             }
           }
@@ -347,7 +364,7 @@ export const UsersDebateRoom: React.FC = () => {
 
   // Auto-start debate when both users are present
   useEffect(() => {
-    if (!debate || !currentUser || debate.status !== 'waiting') return;
+    if (!debate || !currentUser || debate.status !== 'waiting' || !hasBothTeams(debate)) return;
     
     // Check if both participants are present (we can assume they are if the debate is loaded)
     // and automatically start the debate
@@ -395,25 +412,22 @@ export const UsersDebateRoom: React.FC = () => {
           joinedAt: Date.now()
         }];
         
-        // Create turn order: alternate between pro and con teams
-        const proUsers = updatedParticipants.filter(p => p.stance === 'pro').map(p => p.userId);
-        const conUsers = updatedParticipants.filter(p => p.stance === 'con').map(p => p.userId);
-        const turnOrder = [];
-        const maxLength = Math.max(proUsers.length, conUsers.length);
+        // Get updated participant lists
+        const proUsers = updatedParticipants.filter(p => p.stance === 'pro');
+        const conUsers = updatedParticipants.filter(p => p.stance === 'con');
         
-        for (let i = 0; i < maxLength; i++) {
-          if (i < proUsers.length) turnOrder.push(proUsers[i]);
-          if (i < conUsers.length) turnOrder.push(conUsers[i]);
-        }
+        // Set first speaker from pro team for round 1
+        const firstProSpeaker = proUsers.length > 0 ? proUsers[0] : null;
         
-        console.log('[DEBUG] Updated turn order for all participants:', turnOrder);
+        console.log('[DEBUG] Updated participants:', updatedParticipants);
         console.log('[DEBUG] Pro users:', proUsers);
         console.log('[DEBUG] Con users:', conUsers);
+        console.log('[DEBUG] First speaker:', firstProSpeaker);
         
         await updateDoc(doc(firestore, 'debates', id), {
-          turnOrder,
           currentTeam: 'pro', // Start with pro team
-          currentTurn: turnOrder[0] || ''
+          currentTurn: firstProSpeaker?.userId || '',
+          currentRound: 1, // Initialize to round 1
         });
       }
     } catch (err) {
@@ -424,91 +438,186 @@ export const UsersDebateRoom: React.FC = () => {
   // Determine if it's my turn
   useEffect(() => {
     if (!debate || !currentUser) return;
-    setIsMyTurn(debate.currentTurn === currentUser.uid);
+    setIsMyTurn(debate.currentTurn === currentUser.uid && hasBothTeams(debate));
     
     if (debate.currentTurn === currentUser.uid && argumentInputRef.current) {
       argumentInputRef.current.focus();
     }
   }, [debate, currentUser]);
 
-  // Timer logic
+  // Helper function to check if both teams have participants
+  const hasBothTeams = (debate: Debate | null): boolean => {
+    if (!debate) return false;
+    const proCount = debate.participants.filter(p => p.stance === 'pro').length;
+    const conCount = debate.participants.filter(p => p.stance === 'con').length;
+    return proCount > 0 && conCount > 0;
+  };
+
+  // Get current speaker info
+  const getCurrentSpeaker = () => {
+    if (!debate || !debate.currentTurn) return null;
+    const speaker = debate.participants.find(p => p.userId === debate.currentTurn);
+    if (!speaker) return null;
+    
+    const speakerDetails = participantDetails[speaker.userId];
+    return {
+      ...speaker,
+      displayName: speakerDetails?.displayName || speaker.displayName || 'Unknown'
+    };
+  };
+
+  // Timer logic - visible to all participants, runs only for current speaker
   useEffect(() => {
-    if (!isMyTurn || !debate || debate.status !== 'active') return;
+    // Check if both teams have participants before starting timer
+    if (!debate || debate.status !== 'active' || !hasBothTeams(debate)) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setTimeLeft(turnTimeSeconds);
+      return;
+    }
+
+    // Reset timer when turn changes
     setTimeLeft(turnTimeSeconds);
+    
+    // Clear any existing timer
     if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          handleAutoSubmit();
-          
-          // If this was the last round, end the debate
-          if (debate.currentRound >= maxRounds) {
-            console.log('[DEBUG] UsersDebateRoom: Timer expired on last round, ending debate');
-            setTimeout(() => handleEndDebate(), 1000); // Small delay to allow auto-submit to complete
+    
+    // Only the current speaker's browser actually runs the countdown
+    if (isMyTurn) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current!);
+            handleAutoSubmit();
+            
+            // If this was the last round, end the debate
+            if (debate.currentRound > maxRounds) {
+              console.log('[DEBUG] UsersDebateRoom: Timer expired on last round, ending debate');
+              setTimeout(() => handleEndDebate(), 1000); // Small delay to allow auto-submit to complete
+            }
+            
+            return 0;
           }
-          
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      // For non-current speakers, start a simulated countdown for display purposes
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current!);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isMyTurn, debate?.currentTurn, debate?.status, turnTimeSeconds]);
+  }, [isMyTurn, debate?.currentTurn, debate?.status, debate?.participants, turnTimeSeconds]);
 
-  // Update timer when turnTimeSeconds or currentTurn changes
+  // Update timer when turnTimeSeconds or currentTurn changes - visible to all
   useEffect(() => {
-    setTimeLeft(turnTimeSeconds);
-  }, [turnTimeSeconds, debate?.currentTurn]);
+    if (debate && hasBothTeams(debate) && debate.status === 'active') {
+      setTimeLeft(turnTimeSeconds);
+    }
+  }, [turnTimeSeconds, debate?.currentTurn, debate?.participants, debate?.status]);
 
+
+  // Helper function to get current round participant for each team
+  const getCurrentRoundParticipant = (team: 'pro' | 'con', round: number) => {
+    const teamParticipants = debate?.participants.filter(p => p.stance === team) || [];
+    if (teamParticipants.length === 0) return null;
+    
+    // Use modulo to cycle through participants in each team for each round
+    const participantIndex = (round - 1) % teamParticipants.length;
+    const selectedParticipant = teamParticipants[participantIndex];
+    
+    console.log(`[DEBUG] getCurrentRoundParticipant: team=${team}, round=${round}, participants=${teamParticipants.length}, index=${participantIndex}, selected=${selectedParticipant?.displayName}`);
+    
+    return selectedParticipant;
+  };
 
   // Argument submission
   // 3. When submitting an argument, use the same structure as DebateRoom.tsx
   const handleSubmitArgument = async () => {
-    if (!debate || !currentUser || !argument.trim() || !isMyTurn || isSubmitting || debate.status !== 'active') return;
+    if (!debate || !currentUser || !argument.trim() || !isMyTurn || isSubmitting || debate.status !== 'active' || !hasBothTeams(debate)) return;
     setIsSubmitting(true);
     try {
-      // Calculate round: one round = two arguments
-      const nextArgIndex = (debate.arguments?.length || 0);
-      const roundNum = Math.floor(nextArgIndex / 2) + 1;
+      // Calculate round based on current round from debate state
+      const currentRound = debate.currentRound;
       const newArgument = {
         id: `arg_${Date.now()}`,
         userId: currentUser.uid,
         content: argument.trim(),
         timestamp: Date.now(),
-        round: roundNum,
+        round: currentRound,
         wordCount: argument.trim().split(' ').length,
       };
+      
       // Add argument
       const updatedArguments = [...(debate.arguments || []), newArgument];
       
-      // Calculate next turn using cyclical team-based system
-      const currentTurnIndex = debate.turnOrder.indexOf(currentUser.uid);
-      const nextTurnIndex = (currentTurnIndex + 1) % debate.turnOrder.length;
-      const nextUserId = debate.turnOrder[nextTurnIndex];
-      const nextUser = debate.participants.find(p => p.userId === nextUserId);
-      const nextTeam = nextUser?.stance || (debate.currentTeam === 'pro' ? 'con' : 'pro');
+      // Determine who speaks next based on round-robin system
+      const proParticipants = debate.participants.filter(p => p.stance === 'pro');
+      const conParticipants = debate.participants.filter(p => p.stance === 'con');
       
-      // Increment round only after everyone in the turn order has had a turn
-      let updatedCurrentRound = debate.currentRound;
-      if (debate.turnOrder.length > 0 && (updatedArguments.length % debate.turnOrder.length === 0)) {
-        updatedCurrentRound = debate.currentRound + 1;
+      let nextUserId = '';
+      let nextTeam: 'pro' | 'con' = 'pro';
+      let updatedCurrentRound = currentRound;
+      
+      // Check if current user is pro or con
+      const currentUserStance = debate.participants.find(p => p.userId === currentUser.uid)?.stance;
+      
+      console.log(`[DEBUG] handleSubmitArgument: currentRound=${currentRound}, currentUserStance=${currentUserStance}, proCount=${proParticipants.length}, conCount=${conParticipants.length}`);
+      
+      if (currentUserStance === 'pro') {
+        // Pro just spoke, now it's con's turn in the same round
+        const conSpeaker = getCurrentRoundParticipant('con', currentRound);
+        if (conSpeaker) {
+          nextUserId = conSpeaker.userId;
+          nextTeam = 'con';
+          console.log(`[DEBUG] Pro spoke, con's turn: ${conSpeaker.displayName} (${conSpeaker.userId})`);
+        }
+      } else {
+        // Con just spoke, round is complete, move to next round
+        updatedCurrentRound = currentRound + 1;
+        
+        console.log(`[DEBUG] Con spoke, moving to round ${updatedCurrentRound}`);
+        
+        // Check if debate should end
+        if (updatedCurrentRound > maxRounds) {
+          console.log(`[DEBUG] Debate should end: round ${updatedCurrentRound} > maxRounds ${maxRounds}`);
+          await updateDoc(doc(firestore, 'debates', debate.id), {
+            arguments: updatedArguments,
+            status: 'completed',
+          });
+          setArgument('');
+          setTimeout(() => handleEndDebate(), 1000);
+          return;
+        }
+        
+        // Start next round with pro team
+        const proSpeaker = getCurrentRoundParticipant('pro', updatedCurrentRound);
+        if (proSpeaker) {
+          nextUserId = proSpeaker.userId;
+          nextTeam = 'pro';
+          console.log(`[DEBUG] Next round ${updatedCurrentRound}, pro's turn: ${proSpeaker.displayName} (${proSpeaker.userId})`);
+        }
       }
-      
-      // End debate after maxRounds complete rounds
-      const shouldEnd = updatedCurrentRound >= maxRounds;
       
       await updateDoc(doc(firestore, 'debates', debate.id), {
         arguments: updatedArguments,
         currentTurn: nextUserId,
         currentTeam: nextTeam,
         currentRound: updatedCurrentRound,
-        status: shouldEnd ? 'completed' : 'active',
       });
       setArgument('');
-      if (shouldEnd) setTimeout(() => handleEndDebate(), 1000);
     } catch (e) {
       console.error('Failed to submit argument:', e);
     } finally {
@@ -520,43 +629,63 @@ export const UsersDebateRoom: React.FC = () => {
   const handleAutoSubmit = async () => {
     if (!debate || !currentUser || !isMyTurn || debate.status !== 'active') return;
     try {
-      const nextArgIndex = (debate.arguments?.length || 0);
-      const roundNum = Math.floor(nextArgIndex / 2) + 1;
+      const currentRound = debate.currentRound;
       const newArgument: DebateArgument = {
         id: `arg_${Date.now()}`,
         userId: currentUser.uid,
         content: '[No argument submitted]',
         timestamp: Date.now(),
-        round: roundNum,
+        round: currentRound,
         wordCount: 0,
       };
       const updatedArguments = [...(debate.arguments || []), newArgument];
       
-      // Calculate next turn using cyclical team-based system
-      const currentTurnIndex = debate.turnOrder.indexOf(currentUser.uid);
-      const nextTurnIndex = (currentTurnIndex + 1) % debate.turnOrder.length;
-      const nextUserId = debate.turnOrder[nextTurnIndex];
-      const nextUser = debate.participants.find(p => p.userId === nextUserId);
-      const nextTeam = nextUser?.stance || (debate.currentTeam === 'pro' ? 'con' : 'pro');
+      // Determine who speaks next based on round-robin system
+      const proParticipants = debate.participants.filter(p => p.stance === 'pro');
+      const conParticipants = debate.participants.filter(p => p.stance === 'con');
       
-      // Increment round only after everyone in the turn order has had a turn
-      let updatedCurrentRound = debate.currentRound;
-      if (debate.turnOrder.length > 0 && (updatedArguments.length % debate.turnOrder.length === 0)) {
-        updatedCurrentRound = debate.currentRound + 1;
+      let nextUserId = '';
+      let nextTeam: 'pro' | 'con' = 'pro';
+      let updatedCurrentRound = currentRound;
+      
+      // Check if current user is pro or con
+      const currentUserStance = debate.participants.find(p => p.userId === currentUser.uid)?.stance;
+      
+      if (currentUserStance === 'pro') {
+        // Pro just spoke, now it's con's turn in the same round
+        const conSpeaker = getCurrentRoundParticipant('con', currentRound);
+        if (conSpeaker) {
+          nextUserId = conSpeaker.userId;
+          nextTeam = 'con';
+        }
+      } else {
+        // Con just spoke, round is complete, move to next round
+        updatedCurrentRound = currentRound + 1;
+        
+        // Check if debate should end
+        if (updatedCurrentRound > maxRounds) {
+          await updateDoc(doc(firestore, 'debates', debate.id), {
+            arguments: updatedArguments,
+            status: 'completed',
+          });
+          setTimeout(() => handleEndDebate(), 2000);
+          return;
+        }
+        
+        // Start next round with pro team
+        const proSpeaker = getCurrentRoundParticipant('pro', updatedCurrentRound);
+        if (proSpeaker) {
+          nextUserId = proSpeaker.userId;
+          nextTeam = 'pro';
+        }
       }
-      
-      const isLastRound = updatedCurrentRound >= maxRounds;
       
       await updateDoc(doc(firestore, 'debates', debate.id), {
         arguments: updatedArguments,
         currentTurn: nextUserId,
         currentTeam: nextTeam,
         currentRound: updatedCurrentRound,
-        status: isLastRound ? 'completed' : 'active',
       });
-      if (isLastRound) {
-        setTimeout(() => handleEndDebate(), 2000);
-      }
     } catch (e) {
       console.error('Failed to auto submit:', e);
     }
@@ -593,8 +722,7 @@ export const UsersDebateRoom: React.FC = () => {
         return `ROUND ${arg.round} - ${participant?.stance.toUpperCase()} TEAM - ${participant?.displayName}: "${arg.content}"`;
       }).join('\n');
       
-      const prompt = `YOU ARE AN EXPERT DEBATE JUDGE EVALUATING A PRO VS CON TOURNAMENT. GIVEN THE FOLLOWING DEBATE, RETURN ONLY A VALID JSON OBJECT WITH THESE FIELDS:\n{\n  "winningTeam": "pro" OR "con",\n  "teamScores": {\n    "pro": <TEAM SCORE, FLOAT, 1 DECIMAL>,\n    "con": <TEAM SCORE, FLOAT, 1 DECIMAL>\n  },\n  "individualScores": {\n    "<userId1>": <INDIVIDUAL SCORE, FLOAT, 1 DECIMAL>,\n    "<userId2>": <INDIVIDUAL SCORE, FLOAT, 1 DECIMAL>\n  },\n  "individualFeedback": {\n    "<userId1>": ["<FEEDBACK1>", "<FEEDBACK2>"],\n    "<userId2>": ["<FEEDBACK1>", "<FEEDBACK2>"]\n  },\n  "teamFeedback": {\n    "pro": ["<TEAM FEEDBACK1>"],\n    "con": ["<TEAM FEEDBACK1>"]\n  },\n  "reasoning": "<OVERALL REASONING FOR THE DECISION>",\n  "highlights": ["<BEST ARGUMENT OR MOMENT>"],\n  "learningPoints": ["<WHAT PARTICIPANTS CAN LEARN>"]\n}\n\nEVALUATE EACH PARTICIPANT INDIVIDUALLY (SCORE 0-10) AND PROVIDE TEAM SCORES. CONSIDER ARGUMENT QUALITY, EVIDENCE, REBUTTALS, AND OVERALL PERSUASIVENESS.\n\nDO NOT USE STANCE OR DISPLAYNAME AS KEYS. USE USERID ONLY.\n\nDEBATE DATA:\nTOPIC: ${debate.topic}\n\nPRO TEAM: ${proParticipants.map(p => `${p.displayName} (${p.userId})`).join(', ')}\nCON TEAM: ${conParticipants.map(p => `${p.displayName} (${p.userId})`).join(', ')}\n\nARGUMENTS:\n${argumentsText}`;
-
+      const prompt = `YOU ARE AN EXPERT DEBATE JUDGE. EVALUATE THE FOLLOWING DEBATE AND RETURN ONLY A VALID JSON OBJECT.\n\nSTRICT EVALUATION RULES:\n1. IF NO MEANINGFUL POINTS ARE MADE BY ANYONE: GIVE ZERO TO ALL PARTICIPANTS\n2. IF ANY PARTICIPANT USES ABUSIVE LANGUAGE OR MAKES CONTROVERSIAL STATEMENTS ABOUT RELIGION, COMMUNITY, OR REGION: GIVE ZERO TO THAT PARTICIPANT\n3. ONLY SCORE ARGUMENTS MADE IN ENGLISH, HINDI, OR HINGLISH\n\nOUTPUT FORMAT (JSON ONLY):\n{\n  \"winningTeam\": \"pro\" OR \"con\" OR \"draw\",\n  \"teamScores\": {\n    \"pro\": <0-10, float, 1 decimal>,\n    \"con\": <0-10, float, 1 decimal>\n  },\n  \"individualScores\": {\n    \"<userId1>\": <0-10, float, 1 decimal>,\n    \"<userId2>\": <0-10, float, 1 decimal>\n  },\n  \"individualFeedback\": {\n    \"<userId1>\": [\"<strength1>\", \"<weakness1>\", \"<improvement1>\"],\n    \"<userId2>\": [\"<strength1>\", \"<weakness1>\", \"<improvement1>\"]\n  },\n  \"teamFeedback\": {\n    \"pro\": [\"<strength>\", \"<weakness>\"],\n    \"con\": [\"<strength>\", \"<weakness>\"]\n  },\n  \"reasoning\": \"<detailed explanation of decision>\",\n  \"highlights\": [\"<key moment1>\", \"<key moment2>\"],\n  \"learningPoints\": [\"<learning_point1>\", \"<learning_point2>\"]\n}\n\nDEBATE DATA:\nTOPIC: ${debate.topic}\n\nTEAMS:\nPRO: ${proParticipants.map(p => `${p.displayName} (${p.userId})`).join(', ')}\nCON: ${conParticipants.map(p => `${p.displayName} (${p.userId})`).join(', ')}\n\nARGUMENTS:\n${argumentsText}\n\nEVALUATION CRITERIA (PER PARTICIPANT):\n1. ARGUMENT QUALITY: Clarity, logic, evidence (0-4 pts)\n2. REBUTTAL EFFECTIVENESS: Addressing opponent's points (0-3 pts)\n3. COMMUNICATION: Clarity and persuasiveness (0-2 pts)\n4. DEBATE ETIQUETTE: Respect and rules (0-1 pt)\n\nTEAM SCORES: Average of individual scores per team\n\nIMPORTANT:\n- USE ONLY USERID AS KEYS, NOT DISPLAY NAMES\n- IF NO VALID ARGUMENTS, SCORE 0\n- IF INAPPROPRIATE CONTENT, SCORE 0\n- ONLY SCORE ENGLISH/HINDI/HINGLISH ARGUMENTS`;
 
         // Map aiModel to judgeWithGroq model string
         const judgeModel = aiModel === 'llama' ? 'llama-3.3-70b-versatile' : aiModel === 'gemma' ? 'gemma2-9b-it' : 'llama-3.3-70b-versatile';
@@ -686,7 +814,7 @@ export const UsersDebateRoom: React.FC = () => {
   // Auto end debate after maxRounds
   useEffect(() => {
     if (!debate) return;
-    if (debate.currentRound >= maxRounds && debate.status === 'active') {
+    if (debate.currentRound > maxRounds && debate.status === 'active') {
       console.log('[DEBUG] UsersDebateRoom: Max rounds exceeded, ending debate');
       handleEndDebate();
     }
@@ -820,9 +948,13 @@ export const UsersDebateRoom: React.FC = () => {
           {/* Timer */}
           {!isDebateCompleted && debate?.status === 'active' && (
             <div className="flex items-center gap-2">
-              <Clock className={`w-4 h-4 ${isMyTurn ? 'text-orange-400' : 'text-gray-400'}`} />
-              <span className={`text-sm font-medium ${isMyTurn ? 'text-orange-400' : 'text-gray-400'}`}>
-                {isMyTurn ? `${timeLeft}s` : 'Waiting...'}
+              <Clock className={`w-4 h-4 ${hasBothTeams(debate) ? (isMyTurn ? 'text-orange-400' : 'text-blue-400') : 'text-gray-400'}`} />
+              <span className={`text-sm font-medium ${hasBothTeams(debate) ? (isMyTurn ? 'text-orange-400' : 'text-blue-400') : 'text-gray-400'}`}>
+                {hasBothTeams(debate) ? (
+                  isMyTurn ? `Your turn: ${timeLeft}s` : (
+                    getCurrentSpeaker() ? `${getCurrentSpeaker()?.displayName} speaking: ${timeLeft}s` : 'Waiting...'
+                  )
+                ) : 'Waiting for both teams...'}
               </span>
             </div>
           )}
@@ -858,6 +990,15 @@ export const UsersDebateRoom: React.FC = () => {
                   </div>
                   <div className="text-gray-400 text-xs">
                     {debate.participants.filter(p => p.stance === (myParticipant?.stance === 'pro' ? 'con' : 'pro')).length} members
+                    {debate.status === 'active' && (() => {
+                      const opponentTeam = myParticipant?.stance === 'pro' ? 'con' : 'pro';
+                      const currentRoundSpeaker = getCurrentRoundParticipant(opponentTeam, debate.currentRound);
+                      return currentRoundSpeaker ? (
+                        <span className="block text-blue-300 font-medium">
+                          {participantDetails[currentRoundSpeaker.userId]?.displayName || currentRoundSpeaker.displayName}
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               </div>
@@ -871,6 +1012,14 @@ export const UsersDebateRoom: React.FC = () => {
                   </div>
                   <div className="text-gray-400 text-xs">
                     {debate.participants.filter(p => p.stance === myParticipant?.stance).length} members
+                    {debate.status === 'active' && myParticipant && (() => {
+                      const currentRoundSpeaker = getCurrentRoundParticipant(myParticipant.stance, debate.currentRound);
+                      return currentRoundSpeaker ? (
+                        <span className="block text-green-300 font-medium">
+                          {participantDetails[currentRoundSpeaker.userId]?.displayName || currentRoundSpeaker.displayName}
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
                 <img
@@ -883,10 +1032,23 @@ export const UsersDebateRoom: React.FC = () => {
             {/* Current Turn Indicator */}
             {!isDebateCompleted && debate?.status === 'active' && (
               <div className="flex items-center gap-2 text-sm">
-                <div className={`w-2 h-2 rounded-full ${isMyTurn ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
-                <span className="text-gray-400">
-                  {isMyTurn ? 'Your turn' : `${debate.currentTeam?.toUpperCase()} team's turn`}
-                </span>
+                {hasBothTeams(debate) ? (
+                  <>
+                    <div className={`w-2 h-2 rounded-full ${isMyTurn ? 'bg-green-400 animate-pulse' : 'bg-blue-400 animate-pulse'}`}></div>
+                    <span className={isMyTurn ? 'text-green-400' : 'text-blue-400'}>
+                      {isMyTurn ? 'Your turn' : (
+                        getCurrentSpeaker() ? `${getCurrentSpeaker()?.displayName} is speaking` : `${debate.currentTeam?.toUpperCase()} team's turn`
+                      )}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                    <span className="text-gray-400">
+                      Waiting for both teams to join...
+                    </span>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1038,8 +1200,16 @@ export const UsersDebateRoom: React.FC = () => {
               }
               // Shift+Enter inserts newline (default behavior)
             }}
-            placeholder={isDebateCompleted ? 'Debate has ended.' : isMyTurn ? 'Type your argument...' : 'Waiting for your turn...'}
-            disabled={!isMyTurn || isSubmitting || isDebateCompleted || isTranscribing}
+            placeholder={
+              isDebateCompleted
+                ? 'Debate has ended.'
+                : !hasBothTeams(debate)
+                ? 'Waiting for opponent to join...'
+                : isMyTurn
+                ? 'Type your argument...'
+                : 'Waiting for your turn...'
+            }
+            disabled={!isMyTurn || !hasBothTeams(debate) || isSubmitting || isDebateCompleted || isTranscribing}
             className={`flex-1 rounded-xl px-4 py-3 text-base border-2 focus:ring-2 transition-all duration-200
               ${isMyTurn && !isDebateCompleted ? 'border-green-500 focus:ring-green-600' : 'border-gray-600'}
               bg-gray-900 text-white placeholder-gray-400
@@ -1051,7 +1221,7 @@ export const UsersDebateRoom: React.FC = () => {
           {/* Send button */}
           <Button
             onClick={handleSubmitArgument}
-            disabled={!isMyTurn || !argument.trim() || isSubmitting || isDebateCompleted || isTranscribing}
+            disabled={!isMyTurn || !hasBothTeams(debate) || !argument.trim() || isSubmitting || isDebateCompleted || isTranscribing}
             className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2
               ${isMyTurn && argument.trim() && !isSubmitting && !isDebateCompleted && !isTranscribing ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 shadow-lg hover:shadow-xl' : 'bg-gray-700 text-gray-400 cursor-not-allowed'}
             `}
