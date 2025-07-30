@@ -82,8 +82,7 @@ const DashboardPage: React.FC = () => {
         // Fetch all recent debates and filter in JS for user participation
         const debatesSnapshot = await getDocs(query(
           collection(firestore, 'debates'),
-          orderBy('createdAt', 'desc'),
-          limit(30)
+          orderBy('createdAt', 'asc')
         ));
         const debates: any[] = debatesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         console.log('Current user UID:', user.uid);
@@ -110,7 +109,7 @@ const DashboardPage: React.FC = () => {
           })
           .filter(d => d.rating !== null)
           .sort((a, b) => a.date.getTime() - b.date.getTime()) // Sort by Date objects
-          .slice(-20) // last 20 points
+          
           .map(item => ({
             date: item.displayDate, // Convert to display format after sorting
             rating: item.rating
