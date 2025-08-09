@@ -918,7 +918,7 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
 
   // --- MAIN RENDER LOGIC ---
   return (
-    <div className="relative min-h-screen w-full flex flex-col bg-black text-white" style={{background: '#000'}}>
+    <div className="relative min-h-screen w-full flex flex-col bg-black text-white select-none" style={{background: '#000'}}>
       {/* Always show header at the top */}
       <div className="w-full flex items-center justify-between px-6 py-4 bg-black/80 border-b border-gray-800" style={{position: 'sticky', top: 0, left: 0, zIndex: 50}}>
         <div className="flex items-center gap-4">
@@ -1214,6 +1214,10 @@ export const DebateRoom: React.FC<DebateRoomProps> = ({ debateId: propDebateId }
                     }
                   }
                   // Shift+Enter inserts newline (default behavior)
+                }}
+                onPaste={e => {
+                  e.preventDefault();
+                  return false;
                 }}
                 onBlur={() => handleTyping(false)}
                 placeholder={isDebateCompleted ? 'Debate has ended.' : isMyTurn ? 'Type your argument...' : 'Waiting for your turn...'}

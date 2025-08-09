@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './components/auth/AuthProvider';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
+import ChallengeService from './services/challenge/ChallengeService';
 
 import DashboardPage from './pages/DashboardPage';
 import DebatePage from './pages/DebatePage';
@@ -45,6 +46,13 @@ function useProximityScrollbar() {
 
 const App: React.FC = () => {
   useProximityScrollbar();
+  
+  // Initialize challenge cleanup service
+  useEffect(() => {
+    const cleanup = ChallengeService.startCleanupService();
+    return cleanup;
+  }, []);
+  
   return (
     <AuthProvider>
       <div className="App">

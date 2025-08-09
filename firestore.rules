@@ -38,6 +38,39 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // Allow system/admin to create notifications
+      allow create: if request.auth != null;
+      
+      // Users can update their own notifications (mark as read, delete)
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    
+    // Challenges collection
+    match /challenges/{challengeId} {
+      // Allow read if user is the challenger or one of the challenged users
+      allow read: if request.auth != null && 
+        (resource.data.fromUserId == request.auth.uid || 
+         request.auth.uid in resource.data.toUserIds);
+      
+      // Only authenticated users can create challenges where they are the fromUser
+      allow create: if request.auth != null && 
+        request.auth.uid == resource.data.fromUserId;
+      
+      // Users can update challenges they created or were challenged to (for accepting/declining)
+      allow update: if request.auth != null && 
+        (resource.data.fromUserId == request.auth.uid || 
+         request.auth.uid in resource.data.toUserIds);
+      
+      // Only the challenger can delete their challenges
+      allow delete: if request.auth != null && 
+        resource.data.fromUserId == request.auth.uid;
+    }
+
     // Deny all other operations
     match /{document=**} {
       allow read, write: if false;

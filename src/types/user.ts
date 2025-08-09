@@ -1,6 +1,6 @@
 import { UserPreferences, UserStats } from './auth';
 import { DebateStats } from './debate';
-import { Achievement } from './global';
+import { Achievement, NotificationType } from './global';
 
 // Define missing types locally
 export type UserTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
@@ -133,16 +133,6 @@ export interface UserNotification {
   expiresAt?: Date;
   actionUrl?: string;
 }
-
-export type NotificationType = 
-  | 'debate_invite'
-  | 'debate_start'
-  | 'debate_end'
-  | 'friend_request'
-  | 'achievement'
-  | 'rank_change'
-  | 'tournament'
-  | 'system';
 
 export interface UserSettings {
   privacy: PrivacySettings;

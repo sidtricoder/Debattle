@@ -21,8 +21,8 @@ import {
   Send as SendIcon, 
   MessageSquare,
   Mic,
-  X,
-  Clipboard
+  Clipboard,
+  X
 } from 'lucide-react';
 
 // Constants for user vs user debates
@@ -732,69 +732,177 @@ export const UsersDebateRoom: React.FC = () => {
         const jsonMatch = response.match(/\{[\s\S]*\}/);
         const judgment = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
         console.log('[DEBUG] AI Judge Parsed Judgment:', judgment);
-      // Get AI winner stance
-      const aiWinnerId = judgment?.winner;
+        
+        if (!judgment) {
+          console.error('[DEBUG] Failed to parse AI judgment');
+          throw new Error('Failed to parse AI judgment');
+        }
+      // Get AI winner stance from winningTeam (new format)
+      let aiWinnerId = judgment?.winner; // Try individual winner first
+      
+      // If no individual winner, convert winningTeam to individual winner for 1v1 debates
+      if (!aiWinnerId && judgment?.winningTeam && debate.participants.length === 2) {
+        if (judgment.winningTeam === 'draw') {
+          aiWinnerId = null; // Draw
+        } else {
+          // Find the participant from the winning team
+          const winningTeamParticipant = debate.participants.find(p => p.stance === judgment.winningTeam);
+          aiWinnerId = winningTeamParticipant?.userId || null;
+        }
+      }
+      
       const aiWinnerParticipant = debate.participants.find(p => p.userId === aiWinnerId);
       const aiWinnerStance = aiWinnerParticipant?.stance;
 
       // Voting logic is commented out.
-      const isDraw = false; // Default to false as voting is disabled
+      const isDraw = judgment?.winningTeam === 'draw' || aiWinnerId === null;
       const finalWinnerId = aiWinnerId;
       const customJudgment = { ...judgment };
       // Calculate new ratings/points
       let ratings: Record<string, number> | null = null;
       let ratingChanges: Record<string, number> | null = null;
-      if (debate.ratings) {
-        // if (isDraw) {
-        //   // Award both 5 points (or custom logic)
-        //   ratings = { ...debate.ratings };
-        //   ratingChanges = {} as Record<string, number>;
-        //   for (const userId of Object.keys(ratings)) {
-        //     ratingChanges[userId] = 5;
-        //     ratings[userId] += 5;
-        //   }
-        // } else if (finalWinnerId) {
-        //   ratings = calculateDebateRatings(debate.ratings, finalWinnerId);
-        //   ratingChanges = {} as Record<string, number>;
-        //   for (const userId of Object.keys(ratings)) {
-        //     const oldRating = debate.ratings[userId];
-        //     const newRating = ratings[userId];
-        //     ratingChanges[userId] = newRating - oldRating;
-        //   }
-        // }
-        if (isDraw) {
-          // Award both 5 points (or custom logic)
-          ratings = { ...debate.ratings };
-          ratingChanges = {} as Record<string, number>;
-          for (const userId of Object.keys(ratings)) {
-            ratingChanges[userId] = 5;
-            ratings[userId] += 5;
+      
+      // Only calculate ratings for 1v1 debates (exactly 2 participants)
+      if (debate.participants.length === 2) {
+        console.log('[DEBUG] EndDebate: Calculating ELO ratings for 1v1 debate');
+        try {
+          // Fetch current ratings for both participants if not available in debate
+          let currentRatings = debate.ratings;
+          if (!currentRatings) {
+            console.log('[DEBUG] EndDebate: No ratings in debate object, fetching from Firestore');
+            currentRatings = {};
+            for (const participant of debate.participants) {
+              try {
+                const userDoc = await getDoc(doc(firestore, 'users', participant.userId));
+                if (userDoc.exists()) {
+                  const userData = userDoc.data();
+                  currentRatings[participant.userId] = userData.rating || 1200;
+                } else {
+                  currentRatings[participant.userId] = 1200; // Default rating
+                }
+              } catch (error) {
+                console.error(`[DEBUG] EndDebate: Failed to fetch rating for ${participant.userId}:`, error);
+                currentRatings[participant.userId] = 1200; // Default rating
+              }
+            }
+            console.log('[DEBUG] EndDebate: Fetched current ratings:', currentRatings);
           }
-        } else if (finalWinnerId) {
-          ratings = calculateDebateRatings(debate.ratings, finalWinnerId);
-          ratingChanges = {} as Record<string, number>;
-          for (const userId of Object.keys(ratings)) {
-            const oldRating = debate.ratings[userId];
-            const newRating = ratings[userId];
-            ratingChanges[userId] = newRating - oldRating;
+          
+          console.log('[DEBUG] EndDebate: isDraw =', isDraw, ', finalWinnerId =', finalWinnerId);
+          
+          if (isDraw) {
+            console.log('[DEBUG] EndDebate: Calculating draw ratings');
+            // Award both players equal rating change for a draw
+            ratings = calculateDebateRatings(currentRatings, null); // null indicates draw
+            ratingChanges = {} as Record<string, number>;
+            for (const userId of Object.keys(ratings)) {
+              const oldRating = currentRatings[userId];
+              const newRating = ratings[userId];
+              ratingChanges[userId] = newRating - oldRating;
+            }
+            console.log('[DEBUG] EndDebate: Draw ratings calculated:', ratings);
+            console.log('[DEBUG] EndDebate: Draw rating changes:', ratingChanges);
+          } else if (finalWinnerId) {
+            console.log('[DEBUG] EndDebate: Calculating winner ratings for:', finalWinnerId);
+            // Calculate ratings based on winner
+            ratings = calculateDebateRatings(currentRatings, finalWinnerId);
+            ratingChanges = {} as Record<string, number>;
+            for (const userId of Object.keys(ratings)) {
+              const oldRating = currentRatings[userId];
+              const newRating = ratings[userId];
+              ratingChanges[userId] = newRating - oldRating;
+            }
+            console.log('[DEBUG] EndDebate: Winner ratings calculated:', ratings);
+            console.log('[DEBUG] EndDebate: Winner rating changes:', ratingChanges);
+          } else {
+            console.log('[DEBUG] EndDebate: No winner determined, skipping ELO calculation');
           }
-        }
-        // Update user ratings in Firestore
-        if (ratings) {
-          for (const userId of Object.keys(ratings)) {
-            try {
-              await updateDoc(doc(firestore, 'users', userId), {
-                rating: ratings[userId]
-              });
-            } catch (err) {
-              console.error(`Failed to update rating for user ${userId}:`, err);
+          
+          // Update user ratings in Firestore
+          if (ratings) {
+            for (const userId of Object.keys(ratings)) {
+              try {
+                await updateDoc(doc(firestore, 'users', userId), {
+                  rating: ratings[userId]
+                });
+                console.log(`[DEBUG] EndDebate: Updated rating for user ${userId} to ${ratings[userId]}`);
+              } catch (err) {
+                console.error(`[DEBUG] EndDebate: Failed to update rating for user ${userId}:`, err);
+              }
+            }
+            await refreshUserData();
+            
+            // Update user stats for all participants (wins, losses, draws, etc.)
+            for (const userId of Object.keys(ratings)) {
+              try {
+                const userRef = doc(firestore, 'users', userId);
+                const userSnap = await getDoc(userRef);
+                if (!userSnap.exists()) continue;
+                
+                const userData = userSnap.data();
+                let wins = userData.wins || 0;
+                let losses = userData.losses || 0;
+                let draws = userData.draws || 0;
+                let gamesPlayed = userData.gamesPlayed || 0;
+                
+                // Determine result for this user
+                const isDrawResult = isDraw || finalWinnerId === null;
+                const isWin = finalWinnerId === userId;
+                const isLoss = !isDrawResult && !isWin;
+                
+                if (isDrawResult) {
+                  draws += 1;
+                } else if (isWin) {
+                  wins += 1;
+                } else if (isLoss) {
+                  losses += 1;
+                }
+                gamesPlayed += 1;
+                
+                const updateObj: any = {
+                  wins,
+                  losses,
+                  draws,
+                  gamesPlayed,
+                  win_rate: gamesPlayed > 0 ? wins / gamesPlayed : 0,
+                  last_active: new Date(),
+                  updated_at: new Date(),
+                  provisionalRating: gamesPlayed >= 5 ? false : userData.provisionalRating,
+                  rating: ratings[userId]
+                };
+                
+                await updateDoc(userRef, updateObj);
+                console.log(`[DEBUG] EndDebate: Updated user stats for ${userId}:`, updateObj);
+              } catch (error) {
+                console.error(`[DEBUG] EndDebate: Failed to update user stats for ${userId}:`, error);
+              }
             }
           }
+        } catch (error) {
+          console.error('[DEBUG] EndDebate: Failed to calculate ratings:', error);
         }
-        await refreshUserData();
+      } else {
+        console.log('[DEBUG] EndDebate: Multi-user debate detected, skipping rating calculations. Only showing AI scores.');
       }
+      
       // Use debateStore.endDebate to handle all updates (prevents double stats counting)
       await endDebate(debate.id, customJudgment);
+      
+      // Update debate document with calculated ratings and rating changes if available
+      if (ratings && ratingChanges) {
+        try {
+          await updateDoc(doc(firestore, 'debates', debate.id), {
+            ratings: ratings,
+            ratingChanges: ratingChanges
+          });
+          console.log('[DEBUG] EndDebate: Updated debate document with ratings and ratingChanges');
+          console.log('[DEBUG] EndDebate: Final ratings:', ratings);
+          console.log('[DEBUG] EndDebate: Final ratingChanges:', ratingChanges);
+        } catch (error) {
+          console.error('[DEBUG] EndDebate: Failed to update debate document with ratings:', error);
+        }
+      }
+      
       setShowJudgment(true);
     } catch (error) {
       console.error('Error ending debate:', error);
@@ -806,6 +914,252 @@ export const UsersDebateRoom: React.FC = () => {
         endReason: 'error',
       };
       await updateDoc(doc(firestore, 'debates', debate.id), updatedDebate);
+    } finally {
+      setIsJudging(false);
+    }
+  };
+
+  // Handle forfeit - immediately end debate with forfeit result
+  const handleForfeit = async () => {
+    if (!debate || !currentUser) return;
+    
+    try {
+      setIsJudging(true);
+      
+      // Find the opponent (the winner)
+      const opponent = debate.participants.find(p => p.userId !== currentUser.uid);
+      if (!opponent) {
+        console.error('No opponent found for forfeit');
+        return;
+      }
+      
+      // Create forfeit judgment with fixed scores: opponent gets 10, current user gets 0
+      const forfeitJudgment = {
+        winner: opponent.userId, // Opponent wins by forfeit
+        winningTeam: opponent.stance, // Winner's team
+        // Main scores structure (for compatibility)
+        scores: {
+          [opponent.userId]: 10.0,
+          [currentUser.uid]: 0.0
+        },
+        // Main feedback structure (for compatibility)
+        feedback: {
+          [opponent.userId]: [
+            "Won by forfeit - opponent gave up",
+            "Victory achieved without completing all rounds",
+            "Consider this a learning opportunity for future debates"
+          ],
+          [currentUser.uid]: [
+            "Forfeited the debate",
+            "Consider staying to complete debates for better learning",
+            "Practice building stronger arguments to avoid forfeit situations"
+          ]
+        },
+        // Individual scores: winner gets 10, forfeiter gets 0
+        individualScores: {
+          [opponent.userId]: 10.0,
+          [currentUser.uid]: 0.0
+        },
+        // Team scores: winner's team gets 10, loser's team gets 0
+        teamScores: {
+          [opponent.stance]: 10.0,
+          [debate.participants.find(p => p.userId === currentUser.uid)?.stance || 'pro']: 0.0
+        },
+        // Individual feedback
+        individualFeedback: {
+          [opponent.userId]: [
+            "Won by forfeit - opponent gave up",
+            "Victory achieved without completing all rounds",
+            "Consider this a learning opportunity for future debates"
+          ],
+          [currentUser.uid]: [
+            "Forfeited the debate",
+            "Consider staying to complete debates for better learning",
+            "Practice building stronger arguments to avoid forfeit situations"
+          ]
+        },
+        // Team feedback
+        teamFeedback: {
+          [opponent.stance]: [
+            "Team won by opponent forfeit",
+            "Victory achieved through opponent withdrawal"
+          ],
+          [debate.participants.find(p => p.userId === currentUser.uid)?.stance || 'pro']: [
+            "Team lost due to forfeit",
+            "Consider completing debates for better experience"
+          ]
+        },
+        reasoning: `Debate ended by forfeit. ${debate.participants.find(p => p.userId === currentUser.uid)?.displayName || 'Participant'} forfeited the debate, awarding victory to ${opponent.displayName || 'opponent'}.`,
+        fallaciesDetected: [], // Required field - empty for forfeit
+        highlights: [
+          `${opponent.displayName || 'Opponent'} won by forfeit`,
+          "Debate concluded before completion"
+        ],
+        learningPoints: [
+          "Complete debates for better learning experience",
+          "Build stronger arguments to avoid forfeit situations",
+          "Practice debate endurance and persistence"
+        ],
+        endReason: 'forfeit', // Mark this as a forfeit ending
+        forfeitedBy: currentUser.uid // Track who forfeited
+      };
+
+      // Calculate new ratings only if this is a 1v1 debate (exactly 2 participants)
+      let ratings: Record<string, number> | null = null;
+      let ratingChanges: Record<string, number> | null = null;
+      
+      if (debate.participants.length === 2) {
+        console.log('[DEBUG] Forfeit: Calculating ELO ratings for 1v1 debate');
+        try {
+          // Fetch current ratings for both participants if not available in debate
+          let currentRatings = debate.ratings;
+          if (!currentRatings) {
+            console.log('[DEBUG] Forfeit: No ratings in debate object, fetching from Firestore');
+            currentRatings = {};
+            for (const participant of debate.participants) {
+              try {
+                const userDoc = await getDoc(doc(firestore, 'users', participant.userId));
+                if (userDoc.exists()) {
+                  const userData = userDoc.data();
+                  currentRatings[participant.userId] = userData.rating || 1200;
+                } else {
+                  currentRatings[participant.userId] = 1200; // Default rating
+                }
+              } catch (error) {
+                console.error(`[DEBUG] Forfeit: Failed to fetch rating for ${participant.userId}:`, error);
+                currentRatings[participant.userId] = 1200; // Default rating
+              }
+            }
+            console.log('[DEBUG] Forfeit: Fetched current ratings:', currentRatings);
+          }
+          
+          console.log('[DEBUG] Forfeit: Opponent is:', opponent.userId);
+          // Calculate ratings using ELO system - opponent wins (gets score 1), current user loses (gets score 0)
+          ratings = calculateDebateRatings(currentRatings, opponent.userId);
+          ratingChanges = {} as Record<string, number>;
+          console.log('[DEBUG] Forfeit: Raw calculated ratings:', ratings);
+          
+          // Calculate rating changes for both players
+          for (const userId of Object.keys(ratings)) {
+            const oldRating = currentRatings[userId];
+            const newRating = ratings[userId];
+            ratingChanges[userId] = newRating - oldRating;
+          }
+          
+          console.log('[DEBUG] Forfeit: Rating changes calculated:', ratingChanges);
+          
+          // Update user ratings in Firestore
+          for (const userId of Object.keys(ratings)) {
+            try {
+              await updateDoc(doc(firestore, 'users', userId), {
+                rating: ratings[userId]
+              });
+              console.log(`[DEBUG] Forfeit: Updated rating for user ${userId} to ${ratings[userId]}`);
+            } catch (err) {
+              console.error(`[DEBUG] Forfeit: Failed to update rating for user ${userId}:`, err);
+            }
+          }
+          
+          // Update user stats for all participants (wins, losses, draws, etc.)
+          for (const userId of Object.keys(ratings)) {
+            try {
+              const userRef = doc(firestore, 'users', userId);
+              const userSnap = await getDoc(userRef);
+              if (!userSnap.exists()) continue;
+              
+              const userData = userSnap.data();
+              let wins = userData.wins || 0;
+              let losses = userData.losses || 0;
+              let draws = userData.draws || 0;
+              let gamesPlayed = userData.gamesPlayed || 0;
+              
+              // For forfeit: opponent wins, current user loses
+              const isWin = userId === opponent.userId;
+              const isLoss = userId === currentUser.uid;
+              
+              if (isWin) {
+                wins += 1;
+              } else if (isLoss) {
+                losses += 1;
+              }
+              gamesPlayed += 1;
+              
+              const updateObj: any = {
+                wins,
+                losses,
+                draws,
+                gamesPlayed,
+                win_rate: gamesPlayed > 0 ? wins / gamesPlayed : 0,
+                last_active: new Date(),
+                updated_at: new Date(),
+                provisionalRating: gamesPlayed >= 5 ? false : userData.provisionalRating,
+                rating: ratings[userId]
+              };
+              
+              await updateDoc(userRef, updateObj);
+              console.log(`[DEBUG] Forfeit: Updated user stats for ${userId}:`, updateObj);
+            } catch (error) {
+              console.error(`[DEBUG] Forfeit: Failed to update user stats for ${userId}:`, error);
+            }
+          }
+          
+          // Refresh current user data
+          await refreshUserData();
+        } catch (error) {
+          console.error('[DEBUG] Forfeit: Failed to calculate ratings:', error);
+        }
+      } else {
+        console.log('[DEBUG] Forfeit: Multi-user debate detected, skipping rating calculations');
+      }
+      
+      // Update debate with forfeit judgment and ratings
+      const updateData: any = {
+        status: 'completed',
+        judgment: forfeitJudgment,
+        endedAt: Date.now(),
+        endReason: 'forfeit',
+        endedBy: currentUser.uid
+      };
+      
+      // Add ratings and rating changes if calculated
+      if (ratings) {
+        updateData.ratings = ratings;
+      }
+      if (ratingChanges) {
+        updateData.ratingChanges = ratingChanges;
+      }
+      
+      // Use debateStore.endDebate to handle all updates consistently
+      await endDebate(debate.id, forfeitJudgment);
+      
+      // Update debate document with calculated ratings and rating changes if available
+      if (ratings && ratingChanges) {
+        try {
+          await updateDoc(doc(firestore, 'debates', debate.id), {
+            ratings: ratings,
+            ratingChanges: ratingChanges
+          });
+          console.log('[DEBUG] Forfeit: Updated debate document with ratings and ratingChanges');
+        } catch (error) {
+          console.error('[DEBUG] Forfeit: Failed to update debate document with ratings:', error);
+        }
+      }
+      
+      // Show judgment modal
+      setShowJudgment(true);
+      setShowWinner(true);
+      
+      console.log('[DEBUG] Forfeit: Debate ended successfully with forfeit judgment');
+    } catch (error) {
+      console.error('[DEBUG] Forfeit: Error ending debate by forfeit:', error);
+      // Still try to end the debate even if judgment fails
+      const basicUpdate = {
+        status: 'completed',
+        endedAt: Date.now(),
+        endReason: 'forfeit_error',
+        endedBy: currentUser.uid
+      };
+      await updateDoc(doc(firestore, 'debates', debate.id), basicUpdate);
     } finally {
       setIsJudging(false);
     }
@@ -933,7 +1287,7 @@ export const UsersDebateRoom: React.FC = () => {
   // })();
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col bg-black text-white" style={{background: '#000'}}>
+    <div className="relative min-h-screen w-full flex flex-col bg-black text-white select-none" style={{background: '#000'}}>
       {/* Always show header at the top */}
       <div className="w-full flex items-center justify-between px-6 py-4 bg-black/80 border-b border-gray-800" style={{position: 'sticky', top: 0, left: 0, zIndex: 50}}>
         <div className="flex items-center gap-4">
@@ -1164,6 +1518,15 @@ export const UsersDebateRoom: React.FC = () => {
           >
             <Clipboard className={`w-6 h-6 ${copySuccess ? 'text-white' : ''}`} />
           </button>
+          {/* Forfeit button */}
+          <Button
+            onClick={handleForfeit}
+            disabled={!debate || isSubmitting || isDebateCompleted || debate.participants.length < 2}
+            className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl mr-2 ${isDebateCompleted || debate.participants.length < 2 ? 'opacity-60 cursor-not-allowed' : ''}`}
+            title="Forfeit Debate - Immediately lose and end the debate"
+          >
+            <X className="w-5 h-5" />
+          </Button>
           {/* End Debate button on the left */}
           <Button
             onClick={handleEndDebate}
@@ -1199,6 +1562,10 @@ export const UsersDebateRoom: React.FC = () => {
                 }
               }
               // Shift+Enter inserts newline (default behavior)
+            }}
+            onPaste={e => {
+              e.preventDefault();
+              return false;
             }}
             placeholder={
               isDebateCompleted
@@ -1285,7 +1652,7 @@ export const UsersDebateRoom: React.FC = () => {
                   <div key={participant.userId} className="flex-1 bg-[#101014] rounded-xl p-4 border border-gray-800">
                     <div className="font-semibold text-lg mb-1 flex items-center justify-between">
                       <span>{participant.displayName}</span>
-                      {isCurrentUser && (
+                      {(isCurrentUser || debate.participants.length === 2) && (
                         <div className={`text-sm font-medium px-2 py-1 rounded ${
                           ratingChange > 0 ? 'bg-green-900 text-green-300' : 
                           ratingChange < 0 ? 'bg-red-900 text-red-300' : 
@@ -1380,7 +1747,7 @@ export const UsersDebateRoom: React.FC = () => {
                       <div key={participant.userId} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                         <div className="font-semibold text-lg mb-1 text-gray-900 dark:text-white flex items-center justify-between">
                           <span>{participant.displayName}</span>
-                          {isCurrentUser && (
+                          {(isCurrentUser || debate.participants.length === 2) && (
                             <div className={`text-sm font-medium px-2 py-1 rounded ${
                               ratingChange > 0 ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' : 
                               ratingChange < 0 ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300' : 

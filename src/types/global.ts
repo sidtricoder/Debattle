@@ -44,7 +44,10 @@ export type NotificationType =
   | 'tournament_start'
   | 'system_announcement'
   | 'friend_request'
-  | 'challenge_received';
+  | 'challenge_received'
+  | 'challenge_accepted'
+  | 'challenge_declined'
+  | 'challenge_expired';
 
 export interface Achievement {
   id: string;
