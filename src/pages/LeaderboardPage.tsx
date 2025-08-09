@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Crown, Medal, TrendingUp, Users, Target, Search } from 'lucide-react';
+import { Trophy, Crown, Medal, TrendingUp, Users, Target, Search, UserPlus, Swords } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
+import ChallengeModal from '../components/challenge/ChallengeModal';
 
 interface LeaderboardUser {
   id: string;
@@ -22,6 +23,7 @@ const LeaderboardPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'rating' | 'games' | 'winRate'>('rating');
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -106,9 +108,22 @@ const LeaderboardPage: React.FC = () => {
             >
               Global Leaderboard
             </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300">
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
               See how you rank against the world's best debaters
             </p>
+            
+            {/* Challenge Anyone Button */}
+            {user && (
+              <motion.button
+                onClick={() => setShowChallengeModal(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Swords className="w-5 h-5" />
+                Challenge Anyone
+              </motion.button>
+            )}
           </motion.div>
 
           {/* User's Rank */}
@@ -295,6 +310,12 @@ const LeaderboardPage: React.FC = () => {
             </div>
           </motion.div>
         </div>
+        
+        {/* Challenge Modal */}
+        <ChallengeModal 
+          open={showChallengeModal} 
+          onClose={() => setShowChallengeModal(false)} 
+        />
       </div>
   );
 };

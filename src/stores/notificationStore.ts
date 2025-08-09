@@ -50,6 +50,12 @@ interface NotificationActions {
   sendDebateResult: (userId: string, debateId: string, result: 'win' | 'loss' | 'draw', ratingChange: number) => Promise<void>;
   sendAchievementUnlocked: (userId: string, achievement: Achievement) => Promise<void>;
   
+  // Challenge notifications
+  sendChallengeReceived: (fromUserId: string, fromUserName: string, toUserIds: string[], challengeId: string, topic: string, settings: any, expiresAt: number) => Promise<void>;
+  sendChallengeAccepted: (challengerId: string, acceptedBy: string, acceptedByName: string, topic: string, debateId: string) => Promise<void>;
+  sendChallengeDeclined: (challengerId: string, declinedBy: string, declinedByName: string, topic: string) => Promise<void>;
+  sendChallengeExpired: (challengerId: string, topic: string, expiredUsers: string[]) => Promise<void>;
+  
   // State management
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -71,6 +77,8 @@ export const useNotificationStore = create<NotificationStore>()(subscribeWithSel
 
     loadNotifications: async (userId: string) => {
       set({ loading: true, error: null });
+      console.log('Loading notifications for user:', userId);
+      
       try {
         const notificationsQuery = query(
           collection(firestore, 'notifications'),
@@ -80,8 +88,38 @@ export const useNotificationStore = create<NotificationStore>()(subscribeWithSel
         );
         
         const notificationsSnapshot = await getDocs(notificationsQuery);
+        console.log('Loaded notifications snapshot:', {
+          size: notificationsSnapshot.size,
+          empty: notificationsSnapshot.empty
+        });
+        
         const notifications = notificationsSnapshot.docs.map(doc => {
           const data = doc.data();
+          console.log('Processing notification doc:', { id: doc.id, data });
+          
+          // Handle different timestamp formats that might exist in Firestore
+          let createdAt = new Date();
+          if (data.createdAt) {
+            if (typeof data.createdAt.toDate === 'function') {
+              createdAt = data.createdAt.toDate();
+            } else if (data.createdAt instanceof Date) {
+              createdAt = data.createdAt;
+            } else if (typeof data.createdAt === 'number') {
+              createdAt = new Date(data.createdAt);
+            }
+          }
+          
+          let expiresAt;
+          if (data.expiresAt) {
+            if (typeof data.expiresAt.toDate === 'function') {
+              expiresAt = data.expiresAt.toDate();
+            } else if (data.expiresAt instanceof Date) {
+              expiresAt = data.expiresAt;
+            } else if (typeof data.expiresAt === 'number') {
+              expiresAt = new Date(data.expiresAt);
+            }
+          }
+          
           return {
             id: doc.id,
             userId: data.userId,
@@ -90,15 +128,23 @@ export const useNotificationStore = create<NotificationStore>()(subscribeWithSel
             message: data.message,
             data: data.data,
             read: data.read || false,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            expiresAt: data.expiresAt?.toDate(),
+            createdAt,
+            expiresAt,
             actionUrl: data.actionUrl
           } as UserNotification;
         });
         
         const unreadCount = notifications.filter(n => !n.read).length;
+        
+        console.log('Processed loaded notifications:', {
+          total: notifications.length,
+          unreadCount,
+          firstFew: notifications.slice(0, 3).map(n => ({ id: n.id, type: n.type, title: n.title }))
+        });
+        
         set({ notifications, unreadCount, loading: false });
       } catch (error: any) {
+        console.error('Error loading notifications:', error);
         set({ error: error.message, loading: false });
       }
     },
@@ -162,6 +208,8 @@ export const useNotificationStore = create<NotificationStore>()(subscribeWithSel
     },
 
     subscribeToNotifications: (userId: string) => {
+      console.log('Setting up notification subscription for user:', userId);
+      
       const notificationsQuery = query(
         collection(firestore, 'notifications'),
         where('userId', '==', userId),
@@ -170,8 +218,39 @@ export const useNotificationStore = create<NotificationStore>()(subscribeWithSel
       );
       
       const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+        console.log('Notification snapshot received:', {
+          size: snapshot.size,
+          empty: snapshot.empty,
+          docChanges: snapshot.docChanges().length
+        });
+        
         const notifications = snapshot.docs.map(doc => {
           const data = doc.data();
+          console.log('Processing notification doc:', { id: doc.id, data });
+          
+          // Handle different timestamp formats that might exist in Firestore
+          let createdAt = new Date();
+          if (data.createdAt) {
+            if (typeof data.createdAt.toDate === 'function') {
+              createdAt = data.createdAt.toDate();
+            } else if (data.createdAt instanceof Date) {
+              createdAt = data.createdAt;
+            } else if (typeof data.createdAt === 'number') {
+              createdAt = new Date(data.createdAt);
+            }
+          }
+          
+          let expiresAt;
+          if (data.expiresAt) {
+            if (typeof data.expiresAt.toDate === 'function') {
+              expiresAt = data.expiresAt.toDate();
+            } else if (data.expiresAt instanceof Date) {
+              expiresAt = data.expiresAt;
+            } else if (typeof data.expiresAt === 'number') {
+              expiresAt = new Date(data.expiresAt);
+            }
+          }
+          
           return {
             id: doc.id,
             userId: data.userId,
@@ -180,14 +259,24 @@ export const useNotificationStore = create<NotificationStore>()(subscribeWithSel
             message: data.message,
             data: data.data,
             read: data.read || false,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            expiresAt: data.expiresAt?.toDate(),
+            createdAt,
+            expiresAt,
             actionUrl: data.actionUrl
           } as UserNotification;
         });
         
         const unreadCount = notifications.filter(n => !n.read).length;
+        
+        console.log('Processed notifications:', {
+          total: notifications.length,
+          unreadCount,
+          firstFew: notifications.slice(0, 3).map(n => ({ id: n.id, type: n.type, title: n.title }))
+        });
+        
         set({ notifications, unreadCount });
+      }, (error) => {
+        console.error('Notification subscription error:', error);
+        set({ error: error.message });
       });
       
       return unsubscribe;
@@ -362,7 +451,7 @@ export const useNotificationStore = create<NotificationStore>()(subscribeWithSel
       try {
         const notification: Omit<UserNotification, 'id'> = {
           userId,
-          type: 'achievement',
+          type: 'achievement_unlocked',
           title: 'Achievement Unlocked!',
           message: `${achievement.name}: ${achievement.description}`,
           data: {
@@ -373,6 +462,114 @@ export const useNotificationStore = create<NotificationStore>()(subscribeWithSel
           createdAt: new Date()
         };
         
+        await addDoc(collection(firestore, 'notifications'), {
+          ...notification,
+          createdAt: Timestamp.now()
+        });
+      } catch (error: any) {
+        set({ error: error.message });
+      }
+    },
+
+    sendChallengeReceived: async (fromUserId: string, fromUserName: string, toUserIds: string[], challengeId: string, topic: string, settings: any, expiresAt: number) => {
+      try {
+        for (const userId of toUserIds) {
+          const notification: Omit<UserNotification, 'id'> = {
+            userId,
+            type: 'challenge_received',
+            title: 'New Debate Challenge!',
+            message: `${fromUserName} has challenged you to debate: "${topic}"`,
+            data: {
+              challengeId,
+              fromUserId,
+              fromUserName,
+              topic,
+              ...settings,
+              expiresAt
+            },
+            read: false,
+            createdAt: new Date(),
+            expiresAt: new Date(expiresAt)
+          };
+
+          await addDoc(collection(firestore, 'notifications'), {
+            ...notification,
+            createdAt: Timestamp.now(),
+            expiresAt: Timestamp.fromDate(new Date(expiresAt))
+          });
+        }
+      } catch (error: any) {
+        set({ error: error.message });
+      }
+    },
+
+    sendChallengeAccepted: async (challengerId: string, acceptedBy: string, acceptedByName: string, topic: string, debateId: string) => {
+      try {
+        const notification: Omit<UserNotification, 'id'> = {
+          userId: challengerId,
+          type: 'challenge_accepted',
+          title: 'Challenge Accepted!',
+          message: `${acceptedByName} accepted your debate challenge on "${topic}"`,
+          data: {
+            debateId,
+            acceptedBy,
+            acceptedByName,
+            topic
+          },
+          read: false,
+          createdAt: new Date(),
+          actionUrl: `/custom-debate/${debateId}`
+        };
+
+        await addDoc(collection(firestore, 'notifications'), {
+          ...notification,
+          createdAt: Timestamp.now()
+        });
+      } catch (error: any) {
+        set({ error: error.message });
+      }
+    },
+
+    sendChallengeDeclined: async (challengerId: string, declinedBy: string, declinedByName: string, topic: string) => {
+      try {
+        const notification: Omit<UserNotification, 'id'> = {
+          userId: challengerId,
+          type: 'challenge_declined',
+          title: 'Challenge Declined',
+          message: `${declinedByName} declined your debate challenge on "${topic}"`,
+          data: {
+            declinedBy,
+            declinedByName,
+            topic
+          },
+          read: false,
+          createdAt: new Date()
+        };
+
+        await addDoc(collection(firestore, 'notifications'), {
+          ...notification,
+          createdAt: Timestamp.now()
+        });
+      } catch (error: any) {
+        set({ error: error.message });
+      }
+    },
+
+    sendChallengeExpired: async (challengerId: string, topic: string, expiredUsers: string[]) => {
+      try {
+        const notification: Omit<UserNotification, 'id'> = {
+          userId: challengerId,
+          type: 'challenge_expired',
+          title: 'Challenge Expired',
+          message: `Your debate challenge on "${topic}" has expired without being accepted`,
+          data: {
+            topic,
+            expiredUsers
+          },
+          read: false,
+          createdAt: new Date()
+        };
+
         await addDoc(collection(firestore, 'notifications'), {
           ...notification,
           createdAt: Timestamp.now()

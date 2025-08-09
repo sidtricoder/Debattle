@@ -184,17 +184,21 @@ const CustomDebateRoom: React.FC<CustomDebateRoomProps> = ({ open, onClose, topi
             </div>
             <div className="text-xs text-gray-500 mt-1">Allowed range: 1 second to 10 minutes (600 seconds)</div>
           </div>
-          {/* Number of rounds */}
+          {/* Number of rounds slider */}
           <div>
             <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-200">Number of Rounds</label>
-            <input
-              type="number"
-              min={1}
-              max={10}
-              value={rounds}
-              onChange={e => setRounds(Math.max(1, Math.min(10, Number(e.target.value))))}
-              className="w-full px-3 py-2 rounded-lg dark:bg-gray-800 dark:text-white"
-            />
+            <div className="flex items-center gap-4">
+              <input
+                type="range"
+                min={1}
+                max={10}
+                step={1}
+                value={rounds}
+                onChange={e => setRounds(Number(e.target.value))}
+                className="w-full accent-blue-500"
+              />
+              <span className="font-bold text-lg text-blue-600 dark:text-blue-400 w-8 text-center">{rounds}</span>
+            </div>
             <div className="text-xs text-gray-500 mt-1">Allowed range: 1 to 10 rounds</div>
           </div>
           {/* Stance segmented button */}

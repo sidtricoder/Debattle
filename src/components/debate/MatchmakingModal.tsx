@@ -7,7 +7,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { firestore } from '../../lib/firebase';
 
 // Constants
-const MAX_ROUNDS = 2;
+const MAX_ROUNDS = 5;
 const TURN_TIME_SECONDS = 60;
 const JUDGE_MODEL = 'llama-70b';
 

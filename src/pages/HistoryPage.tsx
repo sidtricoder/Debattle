@@ -600,7 +600,9 @@ const HistoryPage: React.FC = () => {
                   </div>
                   
                   <Link
-                    to={`/debate/${debate.id}`}
+                    to={debate.participants.some((p: any) => p.userId === 'ai_opponent') 
+                      ? `/debate/${debate.id}` 
+                      : `/custom-debate/${debate.id}`}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                   >
                     View Details

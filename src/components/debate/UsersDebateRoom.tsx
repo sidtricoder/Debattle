@@ -364,21 +364,59 @@ export const UsersDebateRoom: React.FC = () => {
       };
       // Add argument
       const updatedArguments = [...(debate.arguments || []), newArgument];
+      console.log('[DEBUG] handleSubmitArgument: Adding argument:', newArgument);
+      console.log('[DEBUG] handleSubmitArgument: Updated arguments array:', updatedArguments);
+      
+      // Determine if this is the pro or con participant
+      const currentUserStance = debate.participants.find(p => p.userId === currentUser.uid)?.stance;
+      
       // Only increment currentRound after both debaters have submitted for this round
       let updatedCurrentRound = debate.currentRound;
-      if (updatedArguments.length % 2 === 0) {
+      let shouldEndDebate = false;
+      
+      if (currentUserStance === 'pro') {
+        // Pro just spoke, con's turn next (same round)
+        console.log('[DEBUG] handleSubmitArgument: Pro spoke, con\'s turn next');
+      } else {
+        // Con just spoke, round is complete, move to next round
         updatedCurrentRound = debate.currentRound + 1;
+        console.log('[DEBUG] handleSubmitArgument: Con spoke, moving to round:', updatedCurrentRound);
+        
+        // Check if debate should end (after con speaks in the final round)
+        if (updatedCurrentRound > MAX_ROUNDS) {
+          shouldEndDebate = true;
+          console.log('[DEBUG] handleSubmitArgument: Should end debate - rounds exceeded');
+        }
       }
-      // End debate after MAX_ROUNDS rounds (i.e., MAX_ROUNDS*2 arguments)
-      const shouldEnd = updatedCurrentRound > MAX_ROUNDS;
-      await updateDoc(doc(firestore, 'debates', debate.id), {
-        arguments: updatedArguments,
-        currentTurn: debate.participants.find(p => p.userId !== currentUser.uid)?.userId || '',
-        currentRound: updatedCurrentRound,
-        status: shouldEnd ? 'completed' : 'active',
-      });
+      
+      // Update debate document
+      if (shouldEndDebate) {
+        // Save the final argument first, then end the debate
+        await updateDoc(doc(firestore, 'debates', debate.id), {
+          arguments: updatedArguments,
+          currentRound: updatedCurrentRound,
+          status: 'active', // Keep as active temporarily
+        });
+        setArgument('');
+        
+        // Now end the debate after ensuring the argument is saved
+        setTimeout(async () => {
+          await updateDoc(doc(firestore, 'debates', debate.id), {
+            status: 'completed',
+          });
+          handleEndDebate();
+        }, 500);
+        return;
+      } else {
+        await updateDoc(doc(firestore, 'debates', debate.id), {
+          arguments: updatedArguments,
+          currentTurn: debate.participants.find(p => p.userId !== currentUser.uid)?.userId || '',
+          currentRound: updatedCurrentRound,
+          status: 'active',
+        });
+      }
+      
       setArgument('');
-      if (shouldEnd) setTimeout(() => handleEndDebate(), 1000);
     } catch (e) {
       console.error('Failed to submit argument:', e);
     } finally {
@@ -401,19 +439,50 @@ export const UsersDebateRoom: React.FC = () => {
         wordCount: 0,
       };
       const updatedArguments = [...(debate.arguments || []), newArgument];
+      console.log('[DEBUG] handleAutoSubmit: Adding auto-argument:', newArgument);
+      console.log('[DEBUG] handleAutoSubmit: Updated arguments array:', updatedArguments);
+      
+      // Determine if this is the pro or con participant
+      const currentUserStance = debate.participants.find(p => p.userId === currentUser.uid)?.stance;
+      
       let updatedCurrentRound = debate.currentRound;
-      if (updatedArguments.length % 2 === 0) {
+      let shouldEndDebate = false;
+      
+      if (currentUserStance === 'pro') {
+        // Pro just spoke, con's turn next (same round)
+        // No round increment yet
+      } else {
+        // Con just spoke, round is complete, move to next round
         updatedCurrentRound = debate.currentRound + 1;
+        
+        // Check if debate should end (after con speaks in the final round)
+        if (updatedCurrentRound > MAX_ROUNDS) {
+          shouldEndDebate = true;
+        }
       }
-      const isLastRound = updatedCurrentRound > MAX_ROUNDS;
-      await updateDoc(doc(firestore, 'debates', debate.id), {
-        arguments: updatedArguments,
-        currentTurn: debate.participants.find(p => p.userId !== currentUser.uid)?.userId || '',
-        currentRound: updatedCurrentRound,
-        status: isLastRound ? 'completed' : 'active',
-      });
-      if (isLastRound) {
-        setTimeout(() => handleEndDebate(), 2000);
+      
+      if (shouldEndDebate) {
+        // Save the final argument first, then end the debate
+        await updateDoc(doc(firestore, 'debates', debate.id), {
+          arguments: updatedArguments,
+          currentRound: updatedCurrentRound,
+          status: 'active', // Keep as active temporarily
+        });
+        
+        // Now end the debate after ensuring the argument is saved
+        setTimeout(async () => {
+          await updateDoc(doc(firestore, 'debates', debate.id), {
+            status: 'completed',
+          });
+          handleEndDebate();
+        }, 500);
+      } else {
+        await updateDoc(doc(firestore, 'debates', debate.id), {
+          arguments: updatedArguments,
+          currentTurn: debate.participants.find(p => p.userId !== currentUser.uid)?.userId || '',
+          currentRound: updatedCurrentRound,
+          status: 'active',
+        });
       }
     } catch (e) {
       console.error('Failed to auto submit:', e);
@@ -425,14 +494,28 @@ export const UsersDebateRoom: React.FC = () => {
   const handleEndDebate = async () => {
     if (!debate || !currentUser) return;
     
+    let latestDebateData = debate; // Default fallback
+    
     try {
       setIsJudging(true);
       
+      // Fetch the latest debate data to ensure we have all arguments
+      const debateDoc = await getDoc(doc(firestore, 'debates', debate.id));
+      if (!debateDoc.exists()) {
+        console.error('Debate document not found');
+        setIsJudging(false);
+        return;
+      }
+      
+      latestDebateData = { id: debateDoc.id, ...debateDoc.data() } as Debate;
+      console.log('[DEBUG] handleEndDebate: Latest debate data:', latestDebateData);
+      console.log('[DEBUG] handleEndDebate: Arguments count:', latestDebateData.arguments?.length || 0);
+      
       // Check if debate has enough arguments for judgment
-      if (debate.arguments.length < 2) {
+      if (latestDebateData.arguments.length < 2) {
         // End debate without judgment if not enough arguments
         const updatedDebate = {
-          ...debate,
+          ...latestDebateData,
           status: 'completed',
           endedAt: Date.now(),
           endReason: 'insufficient_arguments',
@@ -443,7 +526,7 @@ export const UsersDebateRoom: React.FC = () => {
       }
 
       // Prepare prompt for judge with strict evaluation criteria
-      const prompt = `YOU ARE AN EXPERT DEBATE JUDGE. EVALUATE THE FOLLOWING DEBATE AND RETURN ONLY A VALID JSON OBJECT.\n\nSTRICT EVALUATION RULES:\n1. IF NO MEANINGFUL POINTS ARE MADE BY ANYONE: GIVE ZERO TO ALL PARTICIPANTS\n2. IF ANY PARTICIPANT USES ABUSIVE LANGUAGE OR MAKES CONTROVERSIAL STATEMENTS ABOUT RELIGION, COMMUNITY, OR REGION: GIVE ZERO TO THAT PARTICIPANT\n3. ONLY SCORE ARGUMENTS MADE IN ENGLISH, HINDI, OR HINGLISH\n\nOUTPUT FORMAT (JSON ONLY):\n{\n  "winner": "<userId of winner or null if draw>",\n  "scores": {\n    "<userId1>": <score 0-10, float, 1 decimal>,\n    "<userId2>": <score 0-10, float, 1 decimal>\n  },\n  "feedback": {\n    "<userId1>": ["<strength1>", "<weakness1>", "<improvement1>"],\n    "<userId2>": ["<strength1>", "<weakness1>", "<improvement1>"]\n  },\n  "reasoning": "<detailed explanation of decision>",\n  "highlights": ["<key moment1>", "<key moment2>"],\n  "learningPoints": ["<learning_point1>", "<learning_point2>"]\n}\n\nDEBATE DATA:\nTOPIC: ${debate.topic}\n\nPARTICIPANTS:\n${debate.participants.map(p => `- ${p.displayName} (${p.userId}): ${p.stance.toUpperCase()}`).join('\n')}\n\nARGUMENTS:\n${debate.arguments.map(arg => `ROUND ${arg.round} - ${debate.participants.find(p => p.userId === arg.userId)?.displayName}: "${arg.content}"`).join('\n\n')}\n\nEVALUATION CRITERIA:\n1. ARGUMENT QUALITY: Clarity, logic, and evidence (0-4 points)\n2. REBUTTAL EFFECTIVENESS: Directly addressing opponent's points (0-3 points)\n3. COMMUNICATION: Clarity and persuasiveness (0-2 points)\n4. DEBATE ETIQUETTE: Respect and adherence to rules (0-1 point)\n\nIMPORTANT:\n- USE ONLY USERID AS KEYS, NOT DISPLAY NAMES\n- IF NO VALID ARGUMENTS, SCORE 0\n- IF INAPPROPRIATE CONTENT, SCORE 0\n- ONLY SCORE ENGLISH/HINDI/HINGLISH ARGUMENTS`;
+      const prompt = `YOU ARE AN EXPERT DEBATE JUDGE. EVALUATE THE FOLLOWING DEBATE AND RETURN ONLY A VALID JSON OBJECT.\n\nSTRICT EVALUATION RULES:\n1. IF NO MEANINGFUL POINTS ARE MADE BY ANYONE: GIVE ZERO TO ALL PARTICIPANTS\n2. IF ANY PARTICIPANT USES ABUSIVE LANGUAGE OR MAKES CONTROVERSIAL STATEMENTS ABOUT RELIGION, COMMUNITY, OR REGION: GIVE ZERO TO THAT PARTICIPANT\n3. ONLY SCORE ARGUMENTS MADE IN ENGLISH, HINDI, OR HINGLISH\n\nOUTPUT FORMAT (JSON ONLY):\n{\n  "winner": "<userId of winner or null if draw>",\n  "scores": {\n    "<userId1>": <score 0-10, float, 1 decimal>,\n    "<userId2>": <score 0-10, float, 1 decimal>\n  },\n  "feedback": {\n    "<userId1>": ["<strength1>", "<weakness1>", "<improvement1>"],\n    "<userId2>": ["<strength1>", "<weakness1>", "<improvement1>"]\n  },\n  "reasoning": "<detailed explanation of decision>",\n  "highlights": ["<key moment1>", "<key moment2>"],\n  "learningPoints": ["<learning_point1>", "<learning_point2>"]\n}\n\nDEBATE DATA:\nTOPIC: ${latestDebateData.topic}\n\nPARTICIPANTS:\n${latestDebateData.participants.map(p => `- ${p.displayName} (${p.userId}): ${p.stance.toUpperCase()}`).join('\n')}\n\nARGUMENTS:\n${latestDebateData.arguments.map(arg => `ROUND ${arg.round} - ${latestDebateData.participants.find(p => p.userId === arg.userId)?.displayName}: "${arg.content}"`).join('\n\n')}\n\nEVALUATION CRITERIA:\n1. ARGUMENT QUALITY: Clarity, logic, and evidence (0-4 points)\n2. REBUTTAL EFFECTIVENESS: Directly addressing opponent's points (0-3 points)\n3. COMMUNICATION: Clarity and persuasiveness (0-2 points)\n4. DEBATE ETIQUETTE: Respect and adherence to rules (0-1 point)\n\nIMPORTANT:\n- USE ONLY USERID AS KEYS, NOT DISPLAY NAMES\n- IF NO VALID ARGUMENTS, SCORE 0\n- IF INAPPROPRIATE CONTENT, SCORE 0\n- ONLY SCORE ENGLISH/HINDI/HINGLISH ARGUMENTS. NOTE THATIN MAJORITY OF CASES YOU MUST PROVIDE A CLEAR WINNER EXCEPT THE ONES MENTIONED BEFORE.`;
 
       // Get AI judgment
       const response = await judgeWithGroq(prompt, 'llama-3.3-70b-versatile');
@@ -452,11 +535,11 @@ export const UsersDebateRoom: React.FC = () => {
       
       // Get AI winner stance
       const aiWinnerId = judgment?.winner;
-      const aiWinnerParticipant = debate.participants.find(p => p.userId === aiWinnerId);
+      const aiWinnerParticipant = latestDebateData.participants.find(p => p.userId === aiWinnerId);
       const aiWinnerStance = aiWinnerParticipant?.stance;
       // Get voting winner stance and margin
-      const proVotes = debate.proVotes || 0;
-      const conVotes = debate.conVotes || 0;
+      const proVotes = latestDebateData.proVotes || 0;
+      const conVotes = latestDebateData.conVotes || 0;
       let votingWinnerStance: 'pro' | 'con' | 'draw' = 'draw';
       let voteMargin = 0;
       if (proVotes > conVotes) {
@@ -488,20 +571,20 @@ export const UsersDebateRoom: React.FC = () => {
       // Calculate new ratings/points
       let ratings: Record<string, number> | null = null;
       let ratingChanges: Record<string, number> | null = null;
-      if (debate.ratings) {
+      if (latestDebateData.ratings) {
         if (isDraw) {
           // Award both 5 points (or custom logic)
-          ratings = { ...debate.ratings };
+          ratings = { ...latestDebateData.ratings };
           ratingChanges = {} as Record<string, number>;
           for (const userId of Object.keys(ratings)) {
             ratingChanges[userId] = 5;
             ratings[userId] += 5;
           }
         } else if (finalWinnerId) {
-          ratings = calculateDebateRatings(debate.ratings, finalWinnerId);
+          ratings = calculateDebateRatings(latestDebateData.ratings, finalWinnerId);
           ratingChanges = {} as Record<string, number>;
           for (const userId of Object.keys(ratings)) {
-            const oldRating = debate.ratings[userId];
+            const oldRating = latestDebateData.ratings[userId];
             const newRating = ratings[userId];
             ratingChanges[userId] = newRating - oldRating;
           }
@@ -522,7 +605,7 @@ export const UsersDebateRoom: React.FC = () => {
       }
       // Update debate with custom judgment, ratings, and rating changes
       const updatedDebate = {
-        ...debate,
+        ...latestDebateData,
         status: 'completed',
         judgment: customJudgment,
         ratings,
@@ -574,12 +657,12 @@ export const UsersDebateRoom: React.FC = () => {
       console.error('Error ending debate:', error);
       // Still end the debate even if judgment fails
       const updatedDebate = {
-        ...debate,
+        ...latestDebateData,
         status: 'completed',
         endedAt: Date.now(),
         endReason: 'error',
       };
-      await updateDoc(doc(firestore, 'debates', debate.id), updatedDebate);
+      await updateDoc(doc(firestore, 'debates', latestDebateData.id), updatedDebate);
     } finally {
       setIsJudging(false);
     }
@@ -590,7 +673,10 @@ export const UsersDebateRoom: React.FC = () => {
     if (!debate) return;
     if (debate.currentRound > MAX_ROUNDS && debate.status === 'active') {
       console.log('[DEBUG] UsersDebateRoom: Max rounds exceeded, ending debate');
-      handleEndDebate();
+      // Add a small delay to avoid race conditions with argument submission
+      setTimeout(() => {
+        handleEndDebate();
+      }, 100);
     }
   }, [debate]);
 
@@ -701,7 +787,7 @@ export const UsersDebateRoom: React.FC = () => {
   })();
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col bg-black text-white">
+    <div className="relative min-h-screen w-full flex flex-col bg-black text-white select-none">
       {/* Always show header at the top */}
       <div className="w-full flex items-center justify-between px-6 py-4 bg-black/80 border-b border-gray-800" style={{position: 'sticky', top: 0, left: 0, zIndex: 50}}>
         <div className="flex items-center gap-4">
@@ -971,6 +1057,10 @@ export const UsersDebateRoom: React.FC = () => {
                 }
               }
               // Shift+Enter inserts newline (default behavior)
+            }}
+            onPaste={e => {
+              e.preventDefault();
+              return false;
             }}
             placeholder={isDebateCompleted ? 'Debate has ended.' : isMyTurn ? 'Type your argument...' : 'Waiting for your turn...'}
             disabled={!isMyTurn || isSubmitting || isDebateCompleted || isTranscribing}

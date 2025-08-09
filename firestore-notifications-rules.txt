@@ -1,0 +1,48 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Existing rules...
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications (excludes system placeholders)
+      allow read: if request.auth != null && 
+        resource.data.userId == request.auth.uid &&
+        resource.data.userId != '_system_placeholder';
+      
+      // Only the system can create notifications (via server-side code)
+      allow create: if false;
+      
+      // Users can update/delete their own notifications (not placeholders)
+      allow update, delete: if request.auth != null && 
+        resource.data.userId == request.auth.uid &&
+        resource.data.userId != '_system_placeholder';
+    }
+    
+    // Challenges collection
+    match /challenges/{challengeId} {
+      // Allow read if user is involved (excludes system placeholders)
+      allow read: if request.auth != null && 
+        resource.data.id != '_system_placeholder' &&
+        (resource.data.fromUserId == request.auth.uid || 
+         request.auth.uid in resource.data.toUserIds);
+      
+      // Only authenticated users can create challenges where they are the fromUser
+      allow create: if request.auth != null && 
+        request.auth.uid == resource.data.fromUserId &&
+        resource.data.fromUserId != '_system_placeholder';
+      
+      // Users can update challenges they're involved in (not placeholders)
+      allow update: if request.auth != null && 
+        resource.data.id != '_system_placeholder' &&
+        (resource.data.fromUserId == request.auth.uid || 
+         request.auth.uid in resource.data.toUserIds);
+      
+      // Only the challenger can delete their challenges (not placeholders)
+      allow delete: if request.auth != null && 
+        resource.data.id != '_system_placeholder' &&
+        resource.data.fromUserId == request.auth.uid;
+    }
+  }
+}

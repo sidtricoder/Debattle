@@ -12,16 +12,21 @@ import {
   Trophy,
   TrendingUp,
   Sparkles,
-  Home
+  Home,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
+import { useNotificationStore } from '../../stores/notificationStore';
+import NotificationMenu from '../notifications/NotificationMenu';
 
 const Header: React.FC = () => {
   const { user, signOut, isAuthenticated, signInWithGoogle } = useAuth();
+  const { unreadCount, subscribeToNotifications } = useNotificationStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -48,9 +53,15 @@ const Header: React.FC = () => {
       const target = event.target as HTMLElement;
       const userMenu = document.querySelector('.user-menu');
       const userButton = document.querySelector('.user-button');
+      const notificationMenu = document.querySelector('.notification-menu');
+      const notificationButton = document.querySelector('.notification-button');
       
       if (isUserMenuOpen && userMenu && !userMenu.contains(target) && !userButton?.contains(target)) {
         setIsUserMenuOpen(false);
+      }
+      
+      if (isNotificationMenuOpen && notificationMenu && !notificationMenu.contains(target) && !notificationButton?.contains(target)) {
+        setIsNotificationMenuOpen(false);
       }
     };
 
@@ -74,7 +85,15 @@ const Header: React.FC = () => {
         window.removeEventListener('scroll', handleScroll);
       }
     };
-  }, [isLandingPage, isUserMenuOpen]);
+  }, [isLandingPage, isUserMenuOpen, isNotificationMenuOpen]);
+
+  // Subscribe to notifications
+  useEffect(() => {
+    if (user && isAuthenticated) {
+      const unsubscribe = subscribeToNotifications(user.uid);
+      return unsubscribe;
+    }
+  }, [user, isAuthenticated, subscribeToNotifications]);
 
   // Check for dark mode on mount and when it changes
   useEffect(() => {
@@ -189,7 +208,29 @@ const Header: React.FC = () => {
             </button>
 
             {isAuthenticated ? (
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                {/* Notification Bell */}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsNotificationMenuOpen(!isNotificationMenuOpen)}
+                    className="notification-button p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 relative"
+                  >
+                    <Bell className={`w-5 h-5 ${getTextClasses()}`} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                  
+                  <div className="notification-menu">
+                    <NotificationMenu 
+                      isOpen={isNotificationMenuOpen} 
+                      onClose={() => setIsNotificationMenuOpen(false)} 
+                    />
+                  </div>
+                </div>
+
                 {/* User Menu */}
                 <div className="relative">
                   <button
