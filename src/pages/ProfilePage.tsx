@@ -213,9 +213,6 @@ const ProfilePage: React.FC = () => {
                   className="w-full h-full rounded-full object-cover"
                 />
               </div>
-              <button className="absolute bottom-0 right-0 w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors">
-                <Camera className="w-5 h-5" />
-              </button>
             </div>
 
             {/* Profile Info */}
